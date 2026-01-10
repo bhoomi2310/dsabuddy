@@ -1,4 +1,3 @@
-import { Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/config/constants';
 
@@ -14,17 +13,6 @@ export function Topbar({ user, onSectionChange }) {
         >
           DSABuddy
         </button>
-      </div>
-
-      <div className="flex-1 max-w-md mx-8">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
-          <input
-            type="text"
-            placeholder="Search profiles..."
-            className="w-full bg-[#0D1117] border border-[#1F2937] rounded-lg pl-10 pr-4 py-2 text-[#E5E7EB] text-sm placeholder-[#6B7280] focus:outline-none focus:border-[#FBBF24] transition-colors font-JetBrains-Mono"
-          />
-        </div>
       </div>
 
       <div className="flex items-center gap-4">

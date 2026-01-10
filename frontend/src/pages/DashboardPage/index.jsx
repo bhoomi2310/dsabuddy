@@ -5,6 +5,7 @@ import { Analytics } from './Analytics';
 import { PYQs } from './PYQs';
 import { Leaderboard } from './Leaderboard';
 import { Settings } from './Settings';
+import { QuestionView } from './QuestionView';
 import { userData } from './userData';
 
 export function DashboardPage() {
@@ -14,6 +15,8 @@ export function DashboardPage() {
     switch (activeSection) {
       case 'dashboard':
         return <Dashboard />;
+      case 'problems':
+        return <QuestionView />;
       case 'analytics':
         return <Analytics />;
       case 'pyqs':

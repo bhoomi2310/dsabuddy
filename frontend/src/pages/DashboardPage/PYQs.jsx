@@ -14,6 +14,20 @@ export function PYQs() {
   const currentSet = interviewSets[selectedCompany];
   const questions = companyQuestions[selectedCompany] || [];
 
+  // Apply filters
+  const filteredQuestions = questions.filter((question) => {
+    const matchesDifficulty = difficultyFilter === 'all' || 
+      question.difficulty.toLowerCase() === difficultyFilter.toLowerCase();
+    
+    const matchesFrequency = frequencyFilter === 'all' || 
+      question.frequency.toLowerCase().replace(' ', '-') === frequencyFilter;
+    
+    const matchesStatus = statusFilter === 'all' || 
+      (statusFilter === 'solved' ? question.solved : !question.solved);
+    
+    return matchesDifficulty && matchesFrequency && matchesStatus;
+  });
+
   const difficultyColors = {
     EASY: 'text-[#10B981]',
     MEDIUM: 'text-[#FBBF24]',
@@ -166,7 +180,7 @@ export function PYQs() {
         </div>
 
         <div className="space-y-4">
-          {questions.map((question) => (
+          {filteredQuestions.map((question) => (
             <div
               key={question.id}
               className="bg-[#0D1117] rounded-lg p-6 border border-[#1F2937] hover:border-[#FBBF24]/20 transition-all">
@@ -208,9 +222,15 @@ export function PYQs() {
                     </Badge>
                   )}
 
-                  <Button variant="accent" size="sm" className="!bg-[#FBBF24] hover:!bg-[#D97706]">
-                    Solve
-                  </Button>
+                  <a 
+                    href={question.leetcodeUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                  >
+                    <Button variant="accent" size="sm" className="!bg-[#FBBF24] hover:!bg-[#D97706]">
+                      Solve
+                    </Button>
+                  </a>
                 </div>
               </div>
             </div>

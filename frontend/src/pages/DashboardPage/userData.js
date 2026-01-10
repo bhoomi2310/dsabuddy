@@ -170,20 +170,26 @@ export const leaderboardFilters = [
   { id: 'year', label: 'Year' },
 ];
 
+export const profileSettings = {
+  name: userData.name,
+  email: userData.email,
+  avatar: userData.avatar,
+  branch: userData.branch,
+  year: userData.year,
+};
+
 export const settingSections = [
   {
     id: 'profile',
     icon: 'user',
     title: 'Profile Settings',
-    description: 'Update your personal information',
-    items: ['Name', 'Email', 'Avatar', 'Branch & Year'],
+    description: 'Update your personal information including name, email, avatar, branch and year',
   },
   {
     id: 'platforms',
     icon: 'link',
     title: 'Connected Platforms',
-    description: 'Manage your coding platform connections',
-    items: ['LeetCode', 'CodeChef', 'Codeforces', 'GeeksForGeeks'],
+    description: 'Manage your coding platform connections for LeetCode, CodeChef, Codeforces, and GeeksForGeeks',
   },
 ];
 
@@ -239,6 +245,7 @@ export const companyQuestions = {
       difficulty: 'HARD',
       frequency: 'Very High',
       solved: false,
+      leetcodeUrl: 'https://leetcode.com/problems/trapping-rain-water/',
     },
     {
       id: 2,
@@ -247,6 +254,7 @@ export const companyQuestions = {
       difficulty: 'MEDIUM',
       frequency: 'High',
       solved: false,
+      leetcodeUrl: 'https://leetcode.com/problems/add-two-numbers/',
     },
     {
       id: 3,
@@ -255,6 +263,7 @@ export const companyQuestions = {
       difficulty: 'MEDIUM',
       frequency: 'High',
       solved: false,
+      leetcodeUrl: 'https://leetcode.com/problems/merge-intervals/',
     },
     {
       id: 4,
@@ -263,6 +272,7 @@ export const companyQuestions = {
       difficulty: 'EASY',
       frequency: 'Occasional',
       solved: true,
+      leetcodeUrl: 'https://leetcode.com/problems/two-sum/',
     },
     {
       id: 5,
@@ -271,6 +281,7 @@ export const companyQuestions = {
       difficulty: 'HARD',
       frequency: 'Occasional',
       solved: false,
+      leetcodeUrl: 'https://leetcode.com/problems/median-of-two-sorted-arrays/',
     },
   ],
 };

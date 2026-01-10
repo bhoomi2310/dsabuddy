@@ -1,12 +1,20 @@
-import { LayoutDashboard, BarChart3, FileText, Trophy } from 'lucide-react';
+import { LayoutDashboard, BarChart3, FileText, Trophy, Code2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export function Sidebar({ activeSection, onSectionChange }) {
+  const navigate = useNavigate();
+  
   const menuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { id: 'problems', icon: Code2, label: 'Problems' },
     { id: 'analytics', icon: BarChart3, label: 'Analytics' },
     { id: 'pyqs', icon: FileText, label: 'PYQs' },
     { id: 'leaderboard', icon: Trophy, label: 'Leaderboard' },
   ];
+
+  const handleMenuClick = (itemId) => {
+    onSectionChange(itemId);
+  };
 
   return (
     <div className="fixed left-0 top-0 h-full w-20 bg-[#161B22] border-r border-[#1F2937] flex flex-col items-center py-6 gap-2">
@@ -18,7 +26,7 @@ export function Sidebar({ activeSection, onSectionChange }) {
           return (
             <button
               key={item.id}
-              onClick={() => onSectionChange(item.id)}
+              onClick={() => handleMenuClick(item.id)}
               className={`
                 w-14 h-14 rounded-xl transition-all duration-200
                 flex items-center justify-center group relative
