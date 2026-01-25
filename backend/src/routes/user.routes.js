@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt"
 import User from "../models/user.model.js";
 import jwt from "jsonwebtoken";
-import { loginPostRequestBodySchema, signupPostRequestBodySchema } from "../validation/request.validation.js";
+import { loginPostRequestBodySchema, signupPostRequestBodySchema, onboardingPostRequestBodySchema } from "../validation/request.validation.js";
 import { BlacklistedToken } from "../models/user.model.js";
 
 
@@ -23,9 +23,9 @@ export const signup = async (req, res) => {
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
-    const salt = await bcrypt.genSalt(10);
+  const salt = await bcrypt.genSalt(10);
 
-  const user = await User.insertOne({
+  const user = await User.create({
     name,
     userName,
     email,
@@ -65,7 +65,7 @@ export const login = async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, existingUser.password);
 
     if(!isPasswordValid) {
-        
+        return res.status(401).json({ error: "Invalid password" });
     }
 
     const payload = {
@@ -110,6 +110,14 @@ export const me = async (req, res) => {
         name: user.name,
         userName: user.userName,
         email: user.email,
+        displayName: user.displayName,
+        avatar: user.avatar,
+        leetcodeId: user.leetcodeId,
+        hackerrankId: user.hackerrankId,
+        codeforcesId: user.codeforcesId,
+        codechefId: user.codechefId,
+        gfgId: user.gfgId,
+        onboardingComplete: user.onboardingComplete,
     }
 
     return res.status(200).json({ user: userData });
@@ -168,6 +176,76 @@ export const updatePassword = async (req, res) => {
         console.error("Update password error:", error);
         return res.status(500).json({ 
             error: "Failed to update password" 
+        });
+    }
+};
+
+export const updateOnboarding = async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        const validationResult = await onboardingPostRequestBodySchema.safeParseAsync(req.body);
+
+        if (validationResult.error) {
+            return res.status(400).json({ error: validationResult.error.format() });
+        }
+
+        const {
+            displayName,
+            avatar,
+            leetcodeId,
+            hackerrankId,
+            codeforcesId,
+            codechefId,
+            gfgId,
+        } = validationResult.data;
+
+        const user = await User.findById(req.user._id);
+
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        // Update profile fields
+        user.displayName = displayName || user.userName;
+        if (avatar) {
+            user.avatar = avatar;
+        }
+        user.leetcodeId = leetcodeId || '';
+        user.hackerrankId = hackerrankId || '';
+        user.codeforcesId = codeforcesId || '';
+        user.codechefId = codechefId || '';
+        user.gfgId = gfgId || '';
+        user.onboardingComplete = true;
+
+        await user.save();
+
+        const userData = {
+            _id: user._id,
+            name: user.name,
+            userName: user.userName,
+            email: user.email,
+            displayName: user.displayName,
+            avatar: user.avatar,
+            leetcodeId: user.leetcodeId,
+            hackerrankId: user.hackerrankId,
+            codeforcesId: user.codeforcesId,
+            codechefId: user.codechefId,
+            gfgId: user.gfgId,
+            onboardingComplete: user.onboardingComplete,
+        };
+
+        return res.status(200).json({
+            message: "Profile updated successfully",
+            user: userData,
+        });
+
+    } catch (error) {
+        console.error("Onboarding update error:", error);
+        return res.status(500).json({
+            error: "Failed to update profile",
         });
     }
 };

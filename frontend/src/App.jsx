@@ -5,6 +5,7 @@ import { ROUTES } from './config/constants'
 const LandingPage = lazy(() => import('./pages/LandingPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })))
 const LoginPage = lazy(() => import('./pages/LoginPage'))
+const OnboardingPage = lazy(() => import('./pages/OnboardingPage'))
 const ComponentShowcase = lazy(() => import('./pages/ComponentShowcase'))
 
 const LoadingFallback = () => (
@@ -22,6 +23,7 @@ function App() {
           <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
           <Route path={ROUTES.REGISTER} element={<LoginPage />} />
           <Route path={ROUTES.LOGIN} element={<LoginPage />} />
+          <Route path={ROUTES.ONBOARDING} element={<OnboardingPage />} />
           <Route path="/showcase" element={<ComponentShowcase />} />
         </Routes>
       </Suspense>
