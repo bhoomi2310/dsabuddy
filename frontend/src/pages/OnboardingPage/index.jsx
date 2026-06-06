@@ -88,7 +88,7 @@ export default function OnboardingPage() {
     setLoading(true);
 
     try {
-      let avatarUrl = "";
+      let avatarUrl = avatarPreview || "";
 
       // Upload avatar if selected
       if (avatarFile) {
@@ -163,7 +163,15 @@ export default function OnboardingPage() {
                 <label className="block text-sm text-gray-400 mb-2">Avatar</label>
                 <div className="relative">
                   <div
+                    role="button"
+                    tabIndex={0}
                     onClick={handleAvatarClick}
+                    onKeyDown={(e) => {
+                     if (e.key === "Enter" || e.key === " ") {
+                       e.preventDefault();
+                       handleAvatarClick();
+                     }
+                    }}
                     className="w-24 h-24 rounded-full bg-[#0D1117] border-2 border-gray-700 flex items-center justify-center cursor-pointer hover:border-[#faf506] transition-colors relative group"
                   >
                     {avatarPreview ? (
@@ -308,9 +316,13 @@ export default function OnboardingPage() {
             </Button>
             <p className="text-xs text-gray-500 mt-4">
               By clicking "Finish Setup", you agree to our{" "}
-              <a href="#" className="underline hover:text-[#faf506]">Terms of Service</a>
+              <a href="/terms" className="underline hover:text-[#faf506]">
+                Terms of Service
+              </a>
               {" "}and{" "}
-              <a href="#" className="underline hover:text-[#faf506]">Privacy Policy</a>.
+              <a href="/privacy" className="underline hover:text-[#faf506]">
+                Privacy Policy
+              </a>
             </p>
           </div>
         </form>

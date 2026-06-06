@@ -1,176 +1,333 @@
-import bcrypt from "bcrypt"
-import User from "../models/user.model.js";
+import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { loginPostRequestBodySchema, signupPostRequestBodySchema } from "../validation/request.validation.js";
-import { BlacklistedToken } from "../models/user.model.js";
-
+import User, { BlacklistedToken } from "../models/user.model.js";
+import {
+loginPostRequestBodySchema,
+signupPostRequestBodySchema,
+} from "../validation/request.validation.js";
 
 export const signup = async (req, res) => {
- const validationResult = await signupPostRequestBodySchema.safeParseAsync(req.body);
+const validationResult =
+await signupPostRequestBodySchema.safeParseAsync(req.body);
 
-  if (validationResult.error) {
-    return res.status(400).json({ error: validationResult.error.format() });
-  }
+if (validationResult.error) {
+return res.status(400).json({
+error: validationResult.error.format(),
+});
+}
 
-  const { name, userName, email, password } = validationResult.data;
+const { name, userName, email, password } = validationResult.data;
 
-  const existingUser = await User.findOne({
-    $or: [{ email }, { userName }],
-  });
+const existingUser = await User.findOne({
+$or: [{ email }, { userName }],
+});
 
-  if (existingUser) {
-    return res.status(400).json({ error: "User already exists" });
-  }
+if (existingUser) {
+return res.status(400).json({
+error: "User already exists",
+});
+}
 
-  const hashedPassword = await bcrypt.hash(password, 10);
-    const salt = await bcrypt.genSalt(10);
+const salt = await bcrypt.genSalt(10);
+const hashedPassword = await bcrypt.hash(password, salt);
 
-  const user = await User.insertOne({
-    name,
-    userName,
-    email,
-    password: hashedPassword,
-    salt,
-  });
+const user = await User.create({
+name,
+userName,
+email,
+password: hashedPassword,
+salt,
+});
 
-  const token = jwt.sign(
-    {
-        userId: user._id,
-        email: user.email,
-        userName: user.userName,
-    },
-    process.env.JWT_SECRET
-  )
+const token = jwt.sign(
+{
+userId: user._id,
+email: user.email,
+userName: user.userName,
+},
+process.env.JWT_SECRET,
+{
+expiresIn: "7d",
+}
+);
 
-  return res.status(201).json({ message: "User created successfully", user, token });
+return res.status(201).json({
+message: "User created successfully",
+user,
+token,
+});
 };
 
 export const login = async (req, res) => {
-    const validationResult = await loginPostRequestBodySchema.safeParseAsync(req.body);
+const validationResult =
+await loginPostRequestBodySchema.safeParseAsync(req.body);
 
-    if(validationResult.error) {
-        return res.status(400).json({ error: validationResult.error.format() });
-    }
-
-    const { email, password } = validationResult.data;
-
-    const existingUser = await User.findOne({
-        email,
-    })
-
-    if(!existingUser) {
-        return res.status(404).json({ error: "User not found" })
+if (validationResult.error) {
+return res.status(400).json({
+error: validationResult.error.format(),
+});
 }
 
-    const isPasswordValid = await bcrypt.compare(password, existingUser.password);
+const { email, password } = validationResult.data;
 
-    if(!isPasswordValid) {
-        
-    }
+const existingUser = await User.findOne({
+email,
+});
 
-    const payload = {
-        _id: existingUser._id,
-        email: existingUser.email,
-        userName: existingUser.userName,
-    }
+if (!existingUser) {
+return res.status(404).json({
+error: "User not found",
+});
+}
 
-    const token = jwt.sign(payload, process.env.JWT_SECRET);
+const isPasswordValid = await bcrypt.compare(
+password,
+existingUser.password
+);
 
-    return res.status(200).json({ status: "success", token })
+if (!isPasswordValid) {
+return res.status(401).json({
+error: "Invalid credentials",
+});
+}
+
+const payload = {
+_id: existingUser._id,
+email: existingUser.email,
+userName: existingUser.userName,
+};
+
+const token = jwt.sign(
+payload,
+process.env.JWT_SECRET,
+{
+expiresIn: "7d",
+}
+);
+
+return res.status(200).json({
+status: "success",
+token,
+});
 };
 
 export const logoutUser = async (req, res) => {
-   try {
-     if(!req.user) {
-        return res.status(401).json({ error: "Unauthorized" });
-     }
-     const token = req.headers.authorization?.split(" ")[1];
+try {
+if (!req.user) {
+return res.status(401).json({
+error: "Unauthorized",
+});
+}
 
-     await BlacklistedToken.create({ token, expiresAt: new Date(Date( req.user.exp*1000)) });
+const token =
+  req.headers.authorization?.split(" ")[1];
 
-     return res.status(200).json({ status: "success", message: "Logged out successfully" });
-   } catch (error) {
-        return res.status(500).json({ error: "Internal server error" });
-   }
+if (!token) {
+  return res.status(400).json({
+    error: "Token not found",
+  });
+}
+
+await BlacklistedToken.create({
+  token,
+  expiresAt: new Date(req.user.exp * 1000),
+});
+
+return res.status(200).json({
+  status: "success",
+  message: "Logged out successfully",
+});
+
+} catch (error) {
+return res.status(500).json({
+error: "Internal server error",
+});
+}
 };
 
 export const me = async (req, res) => {
+if (!req.user) {
+return res.status(401).json({
+error: "Unauthorized",
+});
+}
 
-    if(!req.user) {
-        return res.status(401).json({ error: "Unauthorized" });
-    }
+const user = await User.findById(
+req.user._id
+).select("-password -salt");
 
-    const user = await User.findById(req.user._id).select('-password -salt');
+if (!user) {
+return res.status(404).json({
+error: "User not found",
+});
+}
 
-    if(!user) {
-        return res.status(404).json({ error: "User not found" });
-    }
-
-    const userData = {
-        name: user.name,
-        userName: user.userName,
-        email: user.email,
-    }
-
-    return res.status(200).json({ user: userData });
-
+return res.status(200).json({
+user: {
+name: user.name,
+userName: user.userName,
+email: user.email,
+displayName: user.displayName,
+avatar: user.avatar,
+leetcodeId: user.leetcodeId,
+hackerrankId: user.hackerrankId,
+codeforcesId: user.codeforcesId,
+codechefId: user.codechefId,
+gfgId: user.gfgId,
+onboardingComplete: user.onboardingComplete,
+},
+});
 };
 
-export const updatePassword = async (req, res) => {
-    try {
-        if (!req.user) {
-            return res.status(401).json({ error: "Unauthorized" });
-        }
+export const updateOnboarding = async (
+req,
+res
+) => {
+try {
+if (!req.user) {
+return res.status(401).json({
+error: "Unauthorized",
+});
+}
 
-        const { currentPassword, newPassword } = req.body;
+const {
+  displayName,
+  avatar,
+  leetcodeId,
+  hackerrankId,
+  codeforcesId,
+  codechefId,
+  gfgId,
+} = req.body;
+
+const user = await User.findByIdAndUpdate(
+  req.user._id,
+  {
+    displayName,
+    avatar,
+    leetcodeId,
+    hackerrankId,
+    codeforcesId,
+    codechefId,
+    gfgId,
+    onboardingComplete: true,
+  },
+  {
+    new: true,
+  }
+);
+
+if (!user) {
+  return res.status(404).json({
+    error: "User not found",
+  });
+}
+
+return res.status(200).json({
+  message:
+    "Onboarding updated successfully",
+  user,
+});
 
 
-
-        if (newPassword.length < 6) {
-            return res.status(400).json({ 
-                error: "New password must be at least 6 characters long" 
-            });
-        }
-
-
-        const user = await User.findById(req.user._id);
-
-        if (!user) {
-            return res.status(404).json({ error: "User not found" });
-        }
-
-        const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
-
-        if (!isPasswordValid) {
-            return res.status(400).json({ error: "Current password is incorrect" });
-        }
+} catch (error) {
+console.error(
+"Onboarding update error:",
+error
+);
 
 
-        const isSamePassword = await bcrypt.compare(newPassword, user.password);
-
-        if (isSamePassword) {
-            return res.status(400).json({ 
-                error: "New password must be different from current password" 
-            });
-        }
-
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
+return res.status(500).json({
+  error: "Failed to update onboarding",
+});
 
 
-        user.password = hashedPassword;
-        await user.save();
-
-        return res.status(200).json({ 
-            message: "Password updated successfully" 
-        });
-
-    } catch (error) {
-        console.error("Update password error:", error);
-        return res.status(500).json({ 
-            error: "Failed to update password" 
-        });
-    }
+}
 };
 
+export const updatePassword = async (
+req,
+res
+) => {
+try {
+if (!req.user) {
+return res.status(401).json({
+error: "Unauthorized",
+});
+}
 
 
+const {
+  currentPassword,
+  newPassword,
+} = req.body;
+
+if (newPassword.length < 6) {
+  return res.status(400).json({
+    error:
+      "New password must be at least 6 characters long",
+  });
+}
+
+const user = await User.findById(
+  req.user._id
+);
+
+if (!user) {
+  return res.status(404).json({
+    error: "User not found",
+  });
+}
+
+const isPasswordValid =
+  await bcrypt.compare(
+    currentPassword,
+    user.password
+  );
+
+if (!isPasswordValid) {
+  return res.status(400).json({
+    error:
+      "Current password is incorrect",
+  });
+}
+
+const isSamePassword =
+  await bcrypt.compare(
+    newPassword,
+    user.password
+  );
+
+if (isSamePassword) {
+  return res.status(400).json({
+    error:
+      "New password must be different from current password",
+  });
+}
+
+const hashedPassword =
+  await bcrypt.hash(newPassword, 10);
+
+user.password = hashedPassword;
+await user.save();
+
+return res.status(200).json({
+  message:
+    "Password updated successfully",
+});
+
+
+} catch (error) {
+console.error(
+"Update password error:",
+error
+);
+
+
+return res.status(500).json({
+  error: "Failed to update password",
+});
+
+
+}
+};
