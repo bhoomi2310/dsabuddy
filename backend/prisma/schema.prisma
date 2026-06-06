@@ -284,3 +284,18 @@ model BlacklistedToken {
 
   @@index([expiresAt])
 }
+
+model CompanyPyq {
+  id          Int       @id @default(autoincrement())
+  question_id Int?
+  frequency   Float?
+  created_at  DateTime? @db.Timestamp(6)
+  difficulty  String?
+  company     String?
+  link        String?
+  title       String?
+  acceptance  String?
+
+  @@unique([question_id, company])
+  @@map("companypyq")
+}
