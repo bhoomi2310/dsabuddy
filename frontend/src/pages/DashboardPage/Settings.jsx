@@ -159,9 +159,9 @@ export function Settings({ user: propUser, platforms, onUpdate }) {
       if (openModal === 'profile') {
         const res = await userService.updateProfile({
           name: profileData.name,
-          avatarUrl: profileData.avatar,
-          branch: profileData.branch,
-          year: profileData.year,
+          avatarUrl: profileData.avatar || null,
+          branch: profileData.branch || null,
+          year: profileData.year || null,
         });
         if (res?.user) {
           useUserStore.getState().setUser(res.user);
@@ -356,8 +356,9 @@ export function Settings({ user: propUser, platforms, onUpdate }) {
               placeholder="Enter your password to save changes"
               className="w-full bg-[#0D1117] border border-[#1F2937] rounded-lg px-4 py-2.5 text-[#E5E7EB] placeholder-[#6B7280] focus:outline-none focus:border-[#35b9f1] transition-colors font-JetBrains-Mono"
             />
-            {error && <p className="text-red-500 text-sm mt-2 font-JetBrains-Mono">{error}</p>}
           </div>
+
+          {error && <p className="text-red-500 text-sm mt-2 font-JetBrains-Mono">{error}</p>}
 
           <div className="flex gap-3 pt-4">
             <button

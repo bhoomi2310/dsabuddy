@@ -74,6 +74,12 @@ export function LeaderboardRow({ user, rank, isCurrentUser, onClick }) {
       <div className="text-right">
         <p className="text-[#35b9f1] text-xl font-bold font-Spline-Sans">
           {(() => {
+            if (user?.displayLabel && user.displayLabel !== 'points') {
+              if (user.displayValue === undefined || user.displayValue === null) {
+                return 'N/A';
+              }
+              return typeof user.displayValue === 'number' ? user.displayValue.toLocaleString() : String(user.displayValue);
+            }
             const val = (user?.displayValue !== undefined && user?.displayValue !== null) ? user.displayValue : (user?.points || 0);
             return typeof val === 'number' ? val.toLocaleString() : String(val);
           })()}

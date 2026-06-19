@@ -247,14 +247,41 @@ export async function fetchLeetCodeUserStats({ username }) {
 
     const ranking = user.profile?.ranking ?? null;
 
+    // Fetch contest ranking separately to prevent errors from blocking the main profile sync
+    let contestRating = null;
+    let globalRanking = null;
+    try {
+      const CONTEST_QUERY = `
+        query userContestRankingInfo($username: String!) {
+          userContestRanking(username: $username) {
+            rating
+            globalRanking
+          }
+        }
+      `.trim();
+      const contestData = await leetcodeGraphqlRequest({
+        query: CONTEST_QUERY,
+        variables: { username },
+        cookies,
+      });
+      if (contestData?.userContestRanking) {
+        contestRating = contestData.userContestRanking.rating
+          ? Math.round(contestData.userContestRanking.rating)
+          : null;
+        globalRanking = contestData.userContestRanking.globalRanking ?? null;
+      }
+    } catch (contestErr) {
+      console.warn(`Could not fetch LeetCode contest ranking for ${username}:`, contestErr.message);
+    }
+
     return {
       username: user.username,
       problemsSolved: totalSolved,
       easySolved,
       mediumSolved,
       hardSolved,
-      rating: null,
-      globalRanking: null,
+      rating: contestRating,
+      globalRanking: globalRanking,
       ranking,
       reputation: user.profile?.reputation ?? null,
       starRating: user.profile?.starRating ?? null,

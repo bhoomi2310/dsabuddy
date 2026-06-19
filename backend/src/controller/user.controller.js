@@ -91,10 +91,14 @@ export const getLeaderboard = async (req, res) => {
     });
 
     // Sort by the platform rating descending (users with no connection go to the bottom)
+    // Use overall points as a tie-breaker if ratings are equal
     allUsers.sort((a, b) => {
       const ratingA = a.platformConnections[0]?.rating ?? -1;
       const ratingB = b.platformConnections[0]?.rating ?? -1;
-      return ratingB - ratingA;
+      if (ratingB !== ratingA) {
+        return ratingB - ratingA;
+      }
+      return (b.points ?? 0) - (a.points ?? 0);
     });
 
     const usersWithRank = allUsers.map((u, idx) => {
