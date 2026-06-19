@@ -1,2 +1,2 @@
-export { cn, debounce, formatDate, truncateText } from './helpers';
+export { cn, debounce, formatDate, truncateText, getErrorMessage } from './helpers';
 export { validators } from './validators';

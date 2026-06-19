@@ -65,7 +65,9 @@ export function LeaderboardRow({ user, rank, isCurrentUser, onClick }) {
             {user?.name}
             {isCurrentUser && <span className="ml-2 text-[#35b9f1] text-sm font-JetBrains-Mono">(You)</span>}
           </p>
-          <p className="text-[#6B7280] text-sm font-JetBrains-Mono">{user?.branch || 'Computer Science'}</p>
+          {user?.branch && (
+            <p className="text-[#6B7280] text-sm font-JetBrains-Mono">{user.branch}</p>
+          )}
         </div>
       </div>
 

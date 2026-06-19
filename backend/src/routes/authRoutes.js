@@ -4,7 +4,21 @@ import passport from "passport";
 const router = express.Router();
 
 // Start Google Login
-router.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+router.get(
+  "/google",
+  (req, res, next) => {
+    const referer = req.headers.referer;
+    if (referer) {
+      try {
+        req.session.frontendOrigin = new URL(referer).origin;
+      } catch (e) {
+        console.error("Failed to parse referer in OAuth setup:", e);
+      }
+    }
+    next();
+  },
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
 
 // Google Callback
 router.get(
@@ -12,8 +26,9 @@ router.get(
   passport.authenticate("google", { failureRedirect: "/api/oauth/fail" }),
   (req, res) => {
     const token = req.user?.token;
+    const frontendUrl = req.session.frontendOrigin || process.env.FRONTEND_URL || "http://localhost:5173";
     if (!token) {
-      return res.redirect(`${process.env.FRONTEND_URL}/login?error=auth_token_missing`);
+      return res.redirect(`${frontendUrl}/login?error=auth_token_missing`);
     }
     res.cookie("token", token, {
       httpOnly: true,
@@ -23,7 +38,7 @@ router.get(
     });
     const needsOnboarding = !req.user?.branch || !req.user?.year;
     const targetPath = needsOnboarding ? "/onboarding" : "/dashboard";
-    res.redirect(`${process.env.FRONTEND_URL}${targetPath}?token=${token}`);
+    res.redirect(`${frontendUrl}${targetPath}?token=${token}`);
   }
 );
 
@@ -36,7 +51,8 @@ router.get("/fail", (req, res) => {
 router.get("/logout", (req, res, next) => {
   req.logout(err => {
     if (err) return next(err);
-    res.redirect(process.env.FRONTEND_URL);
+    const redirectUrl = req.headers.referer || process.env.FRONTEND_URL || "http://localhost:5173";
+    res.redirect(redirectUrl);
   });
 });
 

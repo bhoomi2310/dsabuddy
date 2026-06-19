@@ -60,6 +60,8 @@ export const upsertMyPlatformConnection = async (req, res) => {
     clearAnalyticsCache(record.username);
   }
 
+  await recalculateUserPoints(userId);
+
   return res.status(200).json({ platformConnection: record });
 };
 
@@ -81,6 +83,8 @@ export const deleteMyPlatformConnection = async (req, res) => {
   if (existing && existing.username) {
     clearAnalyticsCache(existing.username);
   }
+
+  await recalculateUserPoints(userId);
 
   return res.status(204).send();
 };
@@ -137,6 +141,8 @@ export const syncMyPlatformStats = async (req, res) => {
 
     // Clear analytics cache for this user since we just synced new data
     clearAnalyticsCache(existing.username);
+
+    await recalculateUserPoints(userId);
 
     return res.status(200).json({
       message: "Platform stats synced successfully",

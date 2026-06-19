@@ -1,4 +1,7 @@
 import dotenv from "dotenv";
+
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
 import { prisma } from "./config/prismaClient.js";
@@ -20,8 +23,6 @@ import forumRoutes from "./routes/forum.routes.js";
 import leetcodeRoutes from "./routes/leetcode.routes.js";
 import uploadRoutes from "./routes/upload.js";
 
-dotenv.config();
-
 const app = express();
 
 async function connectDatabases() {
@@ -33,6 +34,7 @@ const allowedOrigins = [
   "https://dsabuddy.xyz/",
   "https://www.dsabuddy.xyz",
   "https://www.dsabuddy.xyz/",
+  "http://localhost:4173",
 ];
 
 if (process.env.FRONTEND_URL) {
@@ -100,9 +102,9 @@ passport.use(
           user = await prisma.user.create({
             data: {
               email,
-              name: profile.displayName,
+              name: profile.displayName || profile.emails[0].value.split("@")[0],
               userName: `user_${profile.id}`,
-              avatarUrl: profile.photos[0]?.value || null,
+              avatarUrl: profile.photos?.[0]?.value || null,
             },
           });
         }
@@ -142,12 +144,15 @@ app.use("/api/forum", forumRoutes);
 app.use("/api/leetcode", leetcodeRoutes);
 app.use("/api/upload", uploadRoutes);
 
+
+
 app.get("/", (req, res) => res.send("Server running"));
 
 const PORT = process.env.PORT || 5000;
 connectDatabases()
   .then(() => {
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
   })
   .catch((err) => {
     console.error("❌ Failed to connect databases:", err);

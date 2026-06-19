@@ -1,9 +1,31 @@
-import { Settings as SettingsIcon, User, Link2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { settingSections, profileSettings, platformsData } from './userData';
+import { Settings as SettingsIcon, User, Link2 } from 'lucide-react';
 import { Modal } from '@/components/common';
 import { userService, platformService } from '@/api/services';
 
+const settingSections = [
+  {
+    id: 'profile',
+    icon: 'user',
+    title: 'Profile Settings',
+    description: 'Update your personal information',
+    items: ['Name', 'Email', 'Avatar', 'Branch & Year'],
+  },
+  {
+    id: 'platforms',
+    icon: 'link',
+    title: 'Connected Platforms',
+    description: 'Manage your coding platform connections',
+    items: ['LeetCode', 'CodeChef', 'Codeforces', 'GeeksForGeeks'],
+  },
+];
+
+const platformsData = [
+  { id: 'leetcode', name: 'LeetCode' },
+  { id: 'codechef', name: 'CodeChef' },
+  { id: 'codeforces', name: 'Codeforces' },
+  { id: 'gfg', name: 'GFG' },
+];
 import { useUserStore } from '@/store/useUserStore';
 import apiClient from '@/api/client';
 import { getInitials } from './components';

@@ -1,7 +1,24 @@
 import { useMemo, useState, useEffect } from 'react';
 import { UserSnapshotCard, PlatformCard, ConsistencyHeatmap, LeaderboardRow, UserProfileModal } from './components';
-import { userData, platformsData, yearlyActivityData, leaderboardFilters } from './userData';
 import { userService, platformService } from '@/api/services';
+
+import leetcodeLogo from "@/assets/Leetcode Icon 24 copy.png";
+import codeforcesLogo from "@/assets/Codeforces Icon 24.png";
+import codechefLogo from "@/assets/Codechef Icon 48.png";
+import gfgLogo from "@/assets/Geeksforgeeks Icon 48.png";
+
+const PLATFORMS_CONFIG = [
+  { id: "leetcode", name: "LeetCode", logo: leetcodeLogo },
+  { id: "codechef", name: "CodeChef", logo: codechefLogo },
+  { id: "codeforces", name: "Codeforces", logo: codeforcesLogo },
+  { id: "gfg", name: "GFG", logo: gfgLogo },
+];
+
+const LEADERBOARD_FILTERS = [
+  { id: "college", label: "College" },
+  { id: "branch", label: "Branch" },
+  { id: "year", label: "Year" },
+];
 
 export function Dashboard({ user, platforms, analytics, leaderboard, onUpdate }) {
   const [activeFilter, setActiveFilter] = useState('college');
@@ -35,13 +52,14 @@ export function Dashboard({ user, platforms, analytics, leaderboard, onUpdate })
     }
   };
 
-  const displayUser = user ? {
-    ...userData,
-    ...user,
-    avatar: user.avatarUrl || user.avatar || null,
-    rank: user.overallRank || user.rank || '-',
-    points: user.points !== undefined && user.points !== null ? user.points : 0,
-  } : userData;
+  const displayUser = {
+    ...(user || {}),
+    name: user?.name || 'Guest',
+    email: user?.email || '',
+    avatar: user?.avatarUrl || user?.avatar || null,
+    rank: user?.overallRank || user?.rank || '-',
+    points: user?.points !== undefined && user?.points !== null ? user.points : 0,
+  };
 
   // Sync initial leaderboard data or fetch when filter changes
   useEffect(() => {
@@ -75,7 +93,7 @@ export function Dashboard({ user, platforms, analytics, leaderboard, onUpdate })
 
   const displayLeaderboard = leaderboardData;
 
-  const displayPlatforms = platformsData.map(defaultPlatform => {
+  const displayPlatforms = PLATFORMS_CONFIG.map(defaultPlatform => {
     const conn = (platforms || []).find(
       c => c.platform?.toLowerCase() === defaultPlatform.id?.toLowerCase()
     );
@@ -185,7 +203,7 @@ export function Dashboard({ user, platforms, analytics, leaderboard, onUpdate })
 
         <div className="bg-[#161B22] rounded-xl p-6 border border-[#1F2937]">
           <div className="flex gap-2 mb-6">
-            {leaderboardFilters.map((filter) => (
+            {LEADERBOARD_FILTERS.map((filter) => (
               <button
                 key={filter.id}
                 onClick={() => setActiveFilter(filter.id)}

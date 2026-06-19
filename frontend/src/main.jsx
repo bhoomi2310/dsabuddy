@@ -4,6 +4,7 @@ import './styles/globals.css'
 import App from './App.jsx'
 import { ErrorBoundary } from './components/common'
 
+
 fetch('/keywords.json')
   .then(response => response.json())
   .then(data => {

@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react';
 import { LeaderboardRow, UserProfileModal } from './components';
-import { leaderboardData as mockLeaderboard, userData as mockUser, leaderboardFilters } from './userData';
 import { Trophy, TrendingUp } from 'lucide-react';
 import { userService } from '@/api/services';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const LEADERBOARD_FILTERS = [
+  { id: "college", label: "College" },
+  { id: "branch", label: "Branch" },
+  { id: "year", label: "Year" },
+];
 
 export function Leaderboard({ user }) {
   const [activeFilter, setActiveFilter] = useState('college');
@@ -16,7 +21,7 @@ export function Leaderboard({ user }) {
     return localStorage.getItem('dsabuddy_hide_points_info') !== 'true';
   });
 
-  const currentUser = user || mockUser;
+  const currentUser = user || {};
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -152,7 +157,7 @@ export function Leaderboard({ user }) {
               {loading && <div className="w-3.5 h-3.5 border-2 border-t-transparent border-[#35b9f1] rounded-full animate-spin" />}
             </div>
             <div className="flex flex-wrap gap-2">
-              {leaderboardFilters.map((filter) => (
+              {LEADERBOARD_FILTERS.map((filter) => (
                 <button
                   key={filter.id}
                   onClick={() => setActiveFilter(filter.id)}

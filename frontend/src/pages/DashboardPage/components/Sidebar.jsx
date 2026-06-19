@@ -1,6 +1,7 @@
 import { LayoutDashboard, BarChart3, Code, Trophy, MessageSquare, LogOut, Settings, Menu, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import dsaLogo from '../../../assets/DSABuddy Logo.png';
 
 function getInitials(name) {
@@ -60,98 +61,116 @@ export function Sidebar({ activeSection, onSectionChange, onLogout, user }) {
           <img src={dsaLogo} alt="DSABuddy Logo" className="w-8 h-8 object-contain" />
           <span className="text-white font-semibold font-Spline-Sans tracking-wide text-sm">DSABuddy</span>
         </div>
-        <button 
+        <motion.button 
+          whileTap={{ scale: 0.9 }}
+          whileHover={{ scale: 1.05 }}
           onClick={() => setMobileMenuOpen(true)}
-          className="text-neutral-400 hover:text-white p-2"
+          className="text-neutral-400 hover:text-white p-2 cursor-pointer"
         >
           <Menu className="w-6 h-6" />
-        </button>
+        </motion.button>
       </div>
 
       {/* Mobile Sidebar Drawer Overlay */}
-      {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 bg-black/60 z-50 transition-opacity duration-300">
-          <div className="fixed inset-y-0 left-0 w-64 max-w-[80vw] bg-[#000000] border-r border-neutral-900 flex flex-col justify-between p-6 shadow-2xl z-50">
-            <div>
-              {/* Header */}
-              <div className="flex items-center justify-between mb-8 pb-4 border-b border-neutral-900">
-                <div className="flex items-center gap-2">
-                  <img src={dsaLogo} alt="DSABuddy Logo" className="w-8 h-8 object-contain" />
-                  <span className="text-white font-semibold font-Spline-Sans text-sm">DSABuddy</span>
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            className="md:hidden fixed inset-0 bg-black/60 z-50"
+          >
+            <motion.div 
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+              className="fixed inset-y-0 left-0 w-64 max-w-[80vw] bg-[#000000] border-r border-neutral-900 flex flex-col justify-between p-6 shadow-2xl z-50"
+            >
+              <div>
+                {/* Header */}
+                <div className="flex items-center justify-between mb-8 pb-4 border-b border-neutral-900">
+                  <div className="flex items-center gap-2">
+                    <img src={dsaLogo} alt="DSABuddy Logo" className="w-8 h-8 object-contain" />
+                    <span className="text-white font-semibold font-Spline-Sans text-sm">DSABuddy</span>
+                  </div>
+                  <motion.button 
+                    whileTap={{ scale: 0.9 }}
+                    whileHover={{ scale: 1.1 }}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-neutral-400 hover:text-white cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </motion.button>
                 </div>
-                <button 
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-neutral-400 hover:text-white"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+
+                {/* Navigation Items */}
+                <nav className="flex flex-col gap-2">
+                  {menuItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = activeSection === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          handleMenuClick(item.id);
+                          setMobileMenuOpen(false);
+                        }}
+                        className={`
+                          w-full flex items-center gap-4 px-4 py-3 rounded-lg transition-colors text-left cursor-pointer
+                          ${isActive 
+                            ? 'text-[#35b9f1] bg-[#161B22] font-medium' 
+                            : 'text-[#8c8c8c] hover:text-white hover:bg-[#161B22]/50'
+                          }
+                        `}
+                      >
+                        <Icon className="w-5 h-5" />
+                        <span className="font-JetBrains-Mono text-sm">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </nav>
               </div>
 
-              {/* Navigation Items */}
-              <nav className="flex flex-col gap-2">
-                {menuItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = activeSection === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        handleMenuClick(item.id);
-                        setMobileMenuOpen(false);
-                      }}
-                      className={`
-                        w-full flex items-center gap-4 px-4 py-3 rounded-lg transition-colors text-left cursor-pointer
-                        ${isActive 
-                          ? 'text-[#35b9f1] bg-[#161B22] font-medium' 
-                          : 'text-[#8c8c8c] hover:text-white hover:bg-[#161B22]/50'
-                        }
-                      `}
-                    >
-                      <Icon className="w-5 h-5" />
-                      <span className="font-JetBrains-Mono text-sm">{item.label}</span>
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
+              {/* Bottom Profile / Settings / Logout */}
+              <div className="border-t border-neutral-900 pt-4 mt-auto">
+                {user && (
+                  <div className="mb-4 px-2">
+                    <p className="text-sm font-semibold text-white truncate font-Spline-Sans">{user.name}</p>
+                    <p className="text-xs text-neutral-500 truncate font-mono mt-0.5">{user.email}</p>
+                  </div>
+                )}
+                
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onSectionChange('settings');
+                    navigate('/dashboard/settings');
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors text-left cursor-pointer"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span className="font-Spline-Sans">Settings</span>
+                </button>
 
-            {/* Bottom Profile / Settings / Logout */}
-            <div className="border-t border-neutral-900 pt-4 mt-auto">
-              {user && (
-                <div className="mb-4 px-2">
-                  <p className="text-sm font-semibold text-white truncate font-Spline-Sans">{user.name}</p>
-                  <p className="text-xs text-neutral-500 truncate font-mono mt-0.5">{user.email}</p>
-                </div>
-              )}
-              
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onSectionChange('settings');
-                  navigate('/dashboard/settings');
-                }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors text-left cursor-pointer"
-              >
-                <Settings className="w-4 h-4" />
-                <span className="font-Spline-Sans">Settings</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onLogout();
-                }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-neutral-400 hover:text-red-500 hover:bg-red-500/5 transition-colors text-left cursor-pointer"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="font-Spline-Sans">Logout</span>
-              </button>
-            </div>
-          </div>
-          {/* Backdrop Click */}
-          <div className="absolute inset-0 -z-10" onClick={() => setMobileMenuOpen(false)} />
-        </div>
-      )}
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onLogout();
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-neutral-400 hover:text-red-500 hover:bg-red-500/5 transition-colors text-left cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="font-Spline-Sans">Logout</span>
+                </button>
+              </div>
+            </motion.div>
+            {/* Backdrop Click */}
+            <div className="absolute inset-0" onClick={() => setMobileMenuOpen(false)} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Desktop Sidebar */}
       <div className="hidden md:flex fixed left-0 top-0 h-full w-16 bg-[#000000] border-r border-neutral-900 flex flex-col items-center justify-between py-6 z-40">

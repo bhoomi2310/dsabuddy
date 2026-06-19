@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { authService } from "@/api/services";
 import { API_BASE_URL } from "@/config/constants";
+import { getErrorMessage } from "@/utils";
 
 export const RegisterForm = () => {
   const navigate = useNavigate();
@@ -49,15 +50,18 @@ export const RegisterForm = () => {
     }
     try {
       setLoading(true);
-      await authService.register({
+      const res = await authService.register({
         name: formData.name,
         email: formData.email,
         password: formData.password,
         userName: formData.userName,
       });
+      if (res?.token) {
+        localStorage.setItem("token", res.token);
+      }
       navigate("/onboarding");
     } catch (err) {
-      setError(err.response?.data?.error || "Signup failed. Please try again.");
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

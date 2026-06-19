@@ -4,7 +4,12 @@ import leetcodeLogo from '@/assets/Leetcode Icon 24 copy.png';
 import codeforcesLogo from '@/assets/Codeforces Icon 24.png';
 import codechefLogo from '@/assets/Codechef Icon 48.png';
 import gfgLogo from '@/assets/Geeksforgeeks Icon 48.png';
-import { yearlyActivityData, analyticsStats } from './userData';
+const DEFAULT_STATS = [
+  { label: "Avg. Daily Problems", value: "0", color: "#10B981" },
+  { label: "Active Days", value: "0", color: "#3B82F6" },
+  { label: "Total Solved", value: "0", color: "#F59E0B" },
+  { label: "Best Streak", value: "0", color: "#8B5CF6" },
+];
 import {
   TrendingUp, Calendar, Target, Award,
   Code2, Zap, Trophy, Star, RefreshCw,
@@ -217,8 +222,8 @@ export function Analytics({ analytics: initialAnalytics }) {
     return () => { cancelled = true; };
   }, []);
 
-  const displayStats   = analytics?.stats   ?? analyticsStats;
-  const displayHeatmap = analytics?.heatmap ?? yearlyActivityData;
+  const displayStats   = analytics?.stats   ?? DEFAULT_STATS;
+  const displayHeatmap = analytics?.heatmap ?? [];
   const platformBreakdown = analytics?.platformBreakdown ?? [];
   const lcDifficulty   = analytics?.lcDifficulty ?? null;
 

@@ -1,6 +1,15 @@
 import { memo } from 'react';
 import { motion } from "framer-motion";
-import { ChartNoAxesCombined, Trophy, Flame, CloudSync } from "lucide-react";
+import { 
+  ChartNoAxesCombined, 
+  Trophy, 
+  Flame, 
+  CloudSync, 
+  BookOpen, 
+  Building2, 
+  Coins, 
+  MessagesSquare 
+} from "lucide-react";
 import { Badge } from "@/components/common";
 import { FeatureCard } from "@/components/layout";
 
@@ -29,12 +38,37 @@ const featuresList = [
     title: "Auto-Sync Platforms",
     description: "Connect your LeetCode, Codeforces, and CodeChef. Everything syncs automatically.",
   },
+  {
+    icon: BookOpen,
+    iconVariant: "primary",
+    title: "Zero to Offer Book",
+    description: "Fully integrated step-by-step placement preparation guide to take you from coding basics to top tech offers.",
+  },
+  {
+    icon: Building2,
+    iconVariant: "info",
+    title: "Company Hiring Insights",
+    description: "Explore recruitment histories, interview patterns, and hiring timelines for major tech companies visiting campus.",
+  },
+  {
+    icon: Coins,
+    iconVariant: "warning",
+    title: "CTC & Eligibility Database",
+    description: "View compensation packages, job profiles, and academic criteria (CGPA, branch) for upcoming campus placements.",
+  },
+  {
+    icon: MessagesSquare,
+    iconVariant: "success",
+    title: "PYQs Discussion Forum",
+    description: "Share code, explain logic, and discuss solutions for previous year campus placement papers with your peers.",
+  },
 ];
 
 export const FeaturesSection = memo(() => {
   return (
     <motion.div 
-      className="mt-15 mb-20 mx-auto xl:max-w-270 2xl:max-w-270 md:max-w-190 sm:max-w-150 max-w-90"
+      id="features"
+      className="mt-15 mb-20 mx-auto xl:max-w-270 2xl:max-w-270 md:max-w-190 sm:max-w-150 max-w-90 scroll-mt-28"
       initial={{ opacity: 0 }}
       whileInView={{ opacity: 1 }}
       viewport={{ once: true, margin: "-100px" }}
@@ -74,7 +108,7 @@ export const FeaturesSection = memo(() => {
             iconVariant={feature.iconVariant}
             title={feature.title}
             description={feature.description}
-            delay={index * 0.1}
+            delay={index * 0.08}
           />
         ))}
       </div>

@@ -6,11 +6,12 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { authService } from "@/api/services";
 import { API_BASE_URL } from "@/config/constants";
+import { getErrorMessage } from "@/utils";
 
 export const LoginForm = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    email: "",
+    identifier: "",
     password: ""
   });
 
@@ -30,10 +31,14 @@ export const LoginForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    if (!formData.identifier.trim() || !formData.password.trim()) {
+      setError("Email/Username and password are required.");
+      return;
+    }
     try{
       setLoading(true);
       const res = await authService.login({
-        email: formData.email,
+        identifier: formData.identifier,
         password: formData.password,
       });
       if (res?.token) {
@@ -41,7 +46,7 @@ export const LoginForm = () => {
       }
       navigate('/dashboard');
     } catch (error) {
-      setError(error.response?.data?.error || 'Login failed. Please try again.');
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -68,13 +73,14 @@ export const LoginForm = () => {
         <div>
           <form onSubmit={handleSubmit} className="font-JetBrains-Mono">
             <FormField
-              label="EMAIL ADDRESS"
+              label="EMAIL ADDRESS OR USERNAME"
               icon={UserRound}
-              type="email"
-              placeholder="std::cin >> email"
-              name="email"
-              value={formData.email}
+              type="text"
+              placeholder="std::cin >> email_or_username"
+              name="identifier"
+              value={formData.identifier}
               onChange={handleChange}
+              required
             />
             
             <FormField
@@ -85,6 +91,7 @@ export const LoginForm = () => {
               name="password"
               value={formData.password}
               onChange={handleChange}
+              required
             />
         <Button type="submit" variant="accent" className="mt-8 w-full flex gap-3" disabled={loading}>
           {loading ? (
