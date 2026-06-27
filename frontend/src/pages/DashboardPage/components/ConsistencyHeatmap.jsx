@@ -40,10 +40,10 @@ const MONTH_GAP = 10;      // extra px gap between month groups
 
 const MONTHS  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-export function ConsistencyHeatmap({ data: initialData = [] }) {
+export function ConsistencyHeatmap({ data: initialData = [], platform, isAnalytics = false, isReadOnly = false }) {
   const [heatmapData,      setHeatmapData]      = useState(initialData);
   const [loading,          setLoading]          = useState(false);
-  const [selectedPlatform, setSelectedPlatform] = useState('all');
+  const [selectedPlatform, setSelectedPlatform] = useState(platform || 'all');
   const [selectedYear,     setSelectedYear]     = useState(new Date().getUTCFullYear());
   const [availableYears,   setAvailableYears]   = useState([new Date().getUTCFullYear()]);
   const [yearDropdown,     setYearDropdown]     = useState(false);
@@ -52,13 +52,30 @@ export function ConsistencyHeatmap({ data: initialData = [] }) {
   const [hoveredDay, setHoveredDay] = useState(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
-  const theme = THEMES[selectedPlatform] ?? THEMES.all;
+  const theme = isAnalytics
+    ? {
+        colors:     ['#161B22', '#0e3a4e', '#166282', '#248ebc', '#35b9f1'],
+        accent:     '#35b9f1',
+        ring:       'hover:ring-[#35b9f1]/50',
+        badge:      'text-[#35b9f1] bg-[#35b9f1]/10 border-[#35b9f1]/20',
+        yearActive: 'bg-[#35b9f1]/10 text-[#35b9f1] border border-[#35b9f1]/40 hover:bg-[#35b9f1]/20',
+        pillActive: 'bg-[#35b9f1] text-[#0D1117] border-[#35b9f1] font-bold shadow-[0_0_12px_rgba(53,185,241,0.3)]',
+        pillIdle:   'border-[#1F2937] text-[#9CA3AF] hover:text-[#E5E7EB] hover:bg-[#35b9f1]/10 hover:border-[#35b9f1]/30',
+      }
+    : (THEMES[selectedPlatform] ?? THEMES.all);
+
+  useEffect(() => {
+    if (platform) {
+      setSelectedPlatform(platform);
+    }
+  }, [platform]);
 
   useEffect(() => {
     if (initialData?.length > 0) setHeatmapData(initialData);
   }, [initialData]);
 
   useEffect(() => {
+    if (isReadOnly) return;
     let cancelled = false;
     (async () => {
       try {
@@ -238,7 +255,6 @@ export function ConsistencyHeatmap({ data: initialData = [] }) {
     return c[4];
   };
 
-
   const formatTooltipDate = (dateStr) => {
     try {
       const date = new Date(dateStr);
@@ -279,8 +295,136 @@ export function ConsistencyHeatmap({ data: initialData = [] }) {
     },
   ];
 
+  if (isAnalytics) {
+    return (
+      <div className="space-y-2 font-JetBrains-Mono select-none relative heatmap-wrapper">
+        {/* Header section with X problems solved and Legend */}
+        <div className="flex justify-between items-baseline">
+          <span className="text-xs font-bold text-[#E5E7EB]">
+            {stats.total} problems this year
+          </span>
+          <div className="flex items-center gap-1">
+            <span className="text-[9px] text-[#9CA3AF] mr-1">Less</span>
+            <div className="w-2.5 h-2.5 bg-[#161B22] border border-[#1F2937] rounded-[2px]" />
+            <div className="w-2.5 h-2.5 bg-[#0e3a4e] rounded-[2px]" />
+            <div className="w-2.5 h-2.5 bg-[#166282] rounded-[2px]" />
+            <div className="w-2.5 h-2.5 bg-[#248ebc] rounded-[2px]" />
+            <div className="w-2.5 h-2.5 bg-[#35b9f1] rounded-[2px]" />
+            <span className="text-[9px] text-[#9CA3AF] ml-1">More</span>
+          </div>
+        </div>
+
+        {/* Heatmap Grid container */}
+        <div className="overflow-x-auto scrollbar-thin pb-2 pt-4 px-2 heatmap-container relative">
+          <div style={{ width: gridWidth + 32, minWidth: gridWidth + 32 }} className="relative">
+            
+            {/* Month labels sitting directly above first columns */}
+            <div className="relative h-[16px] mb-[6px] flex items-center">
+              <div className="w-8 shrink-0" />
+              <div className="relative flex-1 h-full">
+                {monthLabels.map(({ index, label, left }) => (
+                  <span
+                    key={index}
+                    className="absolute top-0 text-[10px] text-[#9CA3AF] select-none tracking-normal font-bold"
+                    style={{ left: `${left}px`, transform: 'translateX(-50%)' }}
+                  >
+                    {label}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Grid with Weekday column and squares */}
+            <div className="flex gap-0 items-start">
+              
+              {/* Weekday labels perfectly aligned */}
+              <div className="flex flex-col shrink-0 select-none text-[9px] text-[#9CA3AF] text-right pr-2 w-8 gap-[3px]">
+                <div className="h-[12px] flex items-center justify-end text-transparent select-none pointer-events-none">Sun</div>
+                <div className="h-[12px] flex items-center justify-end font-bold">Mon</div>
+                <div className="h-[12px] flex items-center justify-end text-transparent select-none pointer-events-none">Tue</div>
+                <div className="h-[12px] flex items-center justify-end font-bold">Wed</div>
+                <div className="h-[12px] flex items-center justify-end text-transparent select-none pointer-events-none">Thu</div>
+                <div className="h-[12px] flex items-center justify-end font-bold">Fri</div>
+                <div className="h-[12px] flex items-center justify-end text-transparent select-none pointer-events-none">Sat</div>
+              </div>
+
+              {/* Squares Columns */}
+              <div className="flex">
+                {columns.map((col, ci) => (
+                  <div
+                    key={ci}
+                    className="flex flex-col gap-[3px]"
+                    style={{ marginLeft: ci === 0 ? 0 : monthBoundarySet.has(ci) ? MONTH_GAP : GAP }}
+                  >
+                    {col.map(day => {
+                      const isCellInYear = day.inYear;
+                      const bgCol = colour(day.count, isCellInYear);
+
+                      return (
+                        <div
+                          key={day.date}
+                          onMouseEnter={(e) => {
+                            if (!isCellInYear) return;
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            const parentRect = e.currentTarget.closest('.heatmap-wrapper').getBoundingClientRect();
+                            setHoveredDay(day);
+                            setTooltipPos({
+                              x: rect.left - parentRect.left + (rect.width / 2),
+                              y: rect.top - parentRect.top - 6
+                            });
+                          }}
+                          onMouseLeave={() => setHoveredDay(null)}
+                          className={`w-3 h-3 rounded-[4px] cursor-pointer transition-all duration-100 
+                                      hover:scale-125 hover:ring-2 hover:ring-offset-1 hover:ring-offset-[#000000] ${theme.ring}
+                                      ${!isCellInYear ? 'opacity-0 pointer-events-none' : ''}`}
+                          style={{
+                            backgroundColor: bgCol,
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+        {/* Interactive Floating Tooltip */}
+        {hoveredDay && (
+          <div
+            className="absolute z-50 bg-[#161B22] border border-[#1F2937] rounded-xl p-3.5 shadow-[0_12px_24px_rgba(0,0,0,0.5)] text-xs w-48 text-[#E5E7EB] pointer-events-none transition-all duration-75"
+            style={{
+              left: `${tooltipPos.x}px`,
+              top: `${tooltipPos.y}px`,
+              transform: 'translate(-50%, -100%)',
+              marginTop: '-4px'
+            }}
+          >
+            <div className="font-bold border-b border-[#1F2937] pb-1.5 mb-1.5 text-xs text-white">
+              {formatTooltipDate(hoveredDay.date)}
+            </div>
+            <div className="space-y-1.5 font-JetBrains-Mono text-[10px]">
+              <div className="flex justify-between items-center">
+                <span className="text-[#9CA3AF]">
+                  {selectedPlatform === 'all' ? 'Submissions' : selectedPlatform === 'leetcode' ? 'LeetCode' : selectedPlatform === 'codeforces' ? 'Codeforces' : selectedPlatform === 'codechef' ? 'CodeChef' : 'GFG'}:
+                </span>
+                <span className="font-bold text-[#35b9f1]">
+                  {hoveredDay.count}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-[#161B22] rounded-xl border border-[#21262D] p-6 relative pb-11">
+    <div className="bg-[#161B22] rounded-xl border border-[#21262D] p-6 relative pb-11 heatmap-wrapper">
       
       {/* ── Top bar: title / pills / year ── */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -427,11 +571,10 @@ export function ConsistencyHeatmap({ data: initialData = [] }) {
                         onMouseEnter={(e) => {
                           if (!isCellInYear) return;
                           const rect = e.currentTarget.getBoundingClientRect();
-                          const parentRect = e.currentTarget.closest('.heatmap-container').getBoundingClientRect();
-                          const containerScrollLeft = e.currentTarget.closest('.overflow-x-auto').scrollLeft;
+                          const parentRect = e.currentTarget.closest('.heatmap-wrapper').getBoundingClientRect();
                           setHoveredDay(day);
                           setTooltipPos({
-                            x: rect.left - parentRect.left + containerScrollLeft + (rect.width / 2),
+                            x: rect.left - parentRect.left + (rect.width / 2),
                             y: rect.top - parentRect.top - 6
                           });
                         }}

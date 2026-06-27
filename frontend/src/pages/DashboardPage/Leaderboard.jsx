@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { LeaderboardRow, UserProfileModal } from './components';
+import { useNavigate } from 'react-router-dom';
+import { LeaderboardRow } from './components';
 import { Trophy, TrendingUp } from 'lucide-react';
 import { userService } from '@/api/services';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,12 +12,15 @@ const LEADERBOARD_FILTERS = [
 ];
 
 export function Leaderboard({ user }) {
+  const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState('college');
   const [activeSubFilter, setActiveSubFilter] = useState('all');
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [skip, setSkip] = useState(0);
   const [error, setError] = useState(null);
-  const [selectedUserName, setSelectedUserName] = useState(null);
   const [showInfo, setShowInfo] = useState(() => {
     return localStorage.getItem('dsabuddy_hide_points_info') !== 'true';
   });
@@ -24,31 +28,45 @@ export function Leaderboard({ user }) {
   const currentUser = user || {};
 
   useEffect(() => {
+    setSkip(0);
+    setLeaderboardData([]);
+    setHasMore(true);
+  }, [activeFilter, activeSubFilter]);
+
+  useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        setLoading(true);
+        if (skip === 0) {
+          setLoading(true);
+        } else {
+          setLoadingMore(true);
+        }
         setError(null);
         const res = await userService.getLeaderboard({ 
           filter: activeFilter,
-          sortBy: activeSubFilter
+          sortBy: activeSubFilter,
+          take: 10,
+          skip: skip
         });
         if (res?.users) {
           const mapped = res.users.map((u, index) => ({
             ...u,
             avatar: u.avatarUrl || null,
-            rank: u.overallRank || u.rank || (index + 1),
+            rank: u.overallRank || u.rank || (skip + index + 1),
           }));
-          setLeaderboardData(mapped);
+          setLeaderboardData(prev => skip === 0 ? mapped : [...prev, ...mapped]);
+          setHasMore(mapped.length === 10);
         }
       } catch (e) {
         console.error("Failed to fetch leaderboard", e);
         setError("Could not load real leaderboard data.");
       } finally {
         setLoading(false);
+        setLoadingMore(false);
       }
     };
     fetchLeaderboard();
-  }, [activeFilter, activeSubFilter]);
+  }, [activeFilter, activeSubFilter, skip]);
 
   const handleDismissInfo = () => {
     setShowInfo(false);
@@ -248,7 +266,7 @@ export function Leaderboard({ user }) {
                     user={u}
                     rank={u.rank}
                     isCurrentUser={u.id === currentUser.id}
-                    onClick={() => setSelectedUserName(u.userName)}
+                    onClick={() => navigate(`/profile/${u.userName}`)}
                   />
                 </motion.div>
               ))
@@ -262,14 +280,27 @@ export function Leaderboard({ user }) {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {hasMore && leaderboardData.length > 0 && !loading && (
+            <div className="flex justify-center pt-6 pb-2">
+              <button
+                disabled={loadingMore}
+                onClick={() => setSkip(prev => prev + 10)}
+                className="w-full sm:w-auto px-8 py-3 bg-[#161B22]/30 hover:bg-[#35b9f1]/5 text-[#35b9f1] border border-[#35b9f1]/30 hover:border-[#35b9f1] rounded-xl transition-all duration-300 cursor-pointer flex items-center justify-center gap-2.5 min-w-[160px] shadow-[0_4px_12px_rgba(53,185,241,0.05)] hover:shadow-[0_4px_20px_rgba(53,185,241,0.15)] disabled:opacity-40 disabled:cursor-not-allowed text-xs uppercase tracking-widest font-semibold font-JetBrains-Mono"
+              >
+                {loadingMore ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-t-transparent border-[#35b9f1] rounded-full animate-spin" />
+                    <span className="text-[#35b9f1]/80">Loading...</span>
+                  </>
+                ) : (
+                  <span>Load More</span>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </div>
-      
-      <UserProfileModal
-        isOpen={!!selectedUserName}
-        onClose={() => setSelectedUserName(null)}
-        userName={selectedUserName}
-      />
     </div>
   );
 }

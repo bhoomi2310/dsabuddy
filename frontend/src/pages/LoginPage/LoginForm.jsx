@@ -3,7 +3,7 @@ import { Button, Divider } from "@/components/common";
 import { FormField, SocialButton } from "@/components/layout";
 import GoogleLogo from "@/assets/Google.png";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { authService } from "@/api/services";
 import { API_BASE_URL } from "@/config/constants";
 import { getErrorMessage } from "@/utils";
@@ -17,6 +17,21 @@ export const LoginForm = () => {
 
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const errorParam = params.get("error");
+    if (errorParam === "email_not_nsut") {
+      setError("Only NSUT email addresses (@nsut.ac.in) are allowed.");
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (errorParam === "auth_token_missing") {
+      setError("Authentication token missing. Please try again.");
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (errorParam) {
+      setError("Authentication failed. Please try again.");
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

@@ -7,6 +7,20 @@ export const listCompanies = async (req, res) => {
   const companies = await prisma.company.findMany({
     take,
     skip,
+    where: {
+      OR: [
+        {
+          questionCount: {
+            gt: 0,
+          },
+        },
+        {
+          roundsInfo: {
+            not: null,
+          },
+        },
+      ],
+    },
     orderBy: [{ name: "asc" }],
     select: {
       id: true,
@@ -14,6 +28,12 @@ export const listCompanies = async (req, res) => {
       slug: true,
       questionCount: true,
       logoUrl: true,
+      placements: {
+        select: {
+          eligibleBranches: true,
+          minCgpa: true,
+        },
+      },
       createdAt: true,
       updatedAt: true,
     },
@@ -48,6 +68,17 @@ export const getCompanyBySlug = async (req, res) => {
           hardTotal: true,
           createdAt: true,
           updatedAt: true,
+        },
+      },
+      placements: {
+        select: {
+          role: true,
+          ctcLpa: true,
+          stipendMonth: true,
+          type: true,
+          category: true,
+          eligibleBranches: true,
+          minCgpa: true,
         },
       },
       createdAt: true,
@@ -126,6 +157,15 @@ export const listCompanyQuestions = async (req, res) => {
           displayName: true,
           difficulty: true,
           leetcodeUrl: true,
+          tags: {
+            select: {
+              tag: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
         },
       },
     },

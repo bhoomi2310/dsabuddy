@@ -48,7 +48,8 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 app.use(
   session({
@@ -77,7 +78,10 @@ passport.use(
         if (!profile.emails || profile.emails.length === 0) {
           return done(new Error("No email found in Google profile"), null);
         }
-        const email = profile.emails[0].value;
+        const email = profile.emails[0].value.toLowerCase();
+        if (!email.endsWith("@nsut.ac.in")) {
+          return done(new Error("Only NSUT email addresses (@nsut.ac.in) are allowed."), null);
+        }
         let user = await prisma.user.findUnique({ where: { email } });
 
         if (!user) {

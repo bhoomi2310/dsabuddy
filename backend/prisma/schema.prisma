@@ -112,6 +112,7 @@ model PlatformConnection {
   rankLabel      String? //  "Knight", "Newbie"
   synced         Boolean @default(false)
   lastSyncedAt   DateTime?
+  topicBreakdown Json?   @default("{}")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -145,11 +146,39 @@ model Company {
   questionCount Int    @default(0)
   logoUrl       String?
 
+  eligibilityCriteria String? @map("eligibility_criteria")
+  roundsInfo          String? @map("rounds_info")
+  oaPlatform          String? @map("oa_platform")
+  topTopics           String[] @map("top_topics")
+  otherInfo           String? @map("other_info")
+
   interviewSets  InterviewSet[]
   companyQuestions CompanyQuestion[]
+  placements     Placement[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Placement {
+  id              String   @id @default(cuid())
+  companyId       String?
+  companyRelation Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  companyName     String   @map("company_name")
+  role            String
+  ctcLpa          Float?   @map("ctc_lpa")
+  stipendMonth    Float?   @map("stipend_month")
+  type            String?
+  category        String?
+  eligibleBranches String[] @map("eligible_branches")
+  minCgpa         Float?   @map("min_cgpa")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@map("placements")
 }
 
 model InterviewSet {

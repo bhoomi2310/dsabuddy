@@ -55,6 +55,18 @@ query getUserProfile($username: String!) {
 }
 `.trim();
 
+export const TAGS_QUERY = `
+query getUserTagStats($username: String!) {
+  matchedUser(username: $username) {
+    tagProblemCounts {
+      advanced { tagName tagSlug problemsSolved }
+      intermediate { tagName tagSlug problemsSolved }
+      fundamental { tagName tagSlug problemsSolved }
+    }
+  }
+}
+`.trim();
+
 export async function leetcodeGraphqlRequest({ query, variables, cookies }) {
   const headers = {
     "content-type": "application/json",
@@ -274,6 +286,35 @@ export async function fetchLeetCodeUserStats({ username }) {
       console.warn(`Could not fetch LeetCode contest ranking for ${username}:`, contestErr.message);
     }
 
+    let topicBreakdown = {};
+    try {
+      const tagData = await leetcodeGraphqlRequest({
+        query: TAGS_QUERY,
+        variables: { username },
+        cookies,
+      });
+      if (tagData?.matchedUser?.tagProblemCounts) {
+        const categories = ["advanced", "intermediate", "fundamental"];
+        for (const cat of categories) {
+          const list = tagData.matchedUser.tagProblemCounts[cat] || [];
+          for (const item of list) {
+            if (item.tagName && item.problemsSolved) {
+              const name = item.tagName;
+              topicBreakdown[name] = (topicBreakdown[name] || 0) + item.problemsSolved;
+            }
+          }
+        }
+      }
+    } catch (tagErr) {
+      console.warn(`Could not fetch LeetCode tag stats for ${username}:`, tagErr.message);
+    }
+
+    const rankLabel = globalRanking
+      ? `#${globalRanking.toLocaleString()}`
+      : ranking
+        ? `#${ranking.toLocaleString()}`
+        : null;
+
     return {
       username: user.username,
       problemsSolved: totalSolved,
@@ -283,8 +324,10 @@ export async function fetchLeetCodeUserStats({ username }) {
       rating: contestRating,
       globalRanking: globalRanking,
       ranking,
+      rankLabel,
       reputation: user.profile?.reputation ?? null,
       starRating: user.profile?.starRating ?? null,
+      topicBreakdown,
     };
   } catch (error) {
     console.error(`Error fetching LeetCode stats for ${username}:`, error);

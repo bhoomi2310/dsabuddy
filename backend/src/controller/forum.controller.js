@@ -326,3 +326,55 @@ export const addComment = async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 };
+
+export const deletePost = async (req, res) => {
+  try {
+    if (!req.user?.userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const { id } = req.params;
+    const post = await prisma.forumPost.findUnique({
+      where: { id },
+      select: { userId: true }
+    });
+    if (!post) {
+      return res.status(404).json({ error: "Post not found" });
+    }
+    if (post.userId !== req.user.userId && req.user.role !== 'admin') {
+      return res.status(403).json({ error: "Forbidden: You are not the author of this post" });
+    }
+    await prisma.forumPost.delete({
+      where: { id }
+    });
+    return res.status(200).json({ success: true, message: "Post deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting post:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const deleteComment = async (req, res) => {
+  try {
+    if (!req.user?.userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const { id } = req.params;
+    const comment = await prisma.comment.findUnique({
+      where: { id },
+      select: { userId: true }
+    });
+    if (!comment) {
+      return res.status(404).json({ error: "Comment not found" });
+    }
+    if (comment.userId !== req.user.userId && req.user.role !== 'admin') {
+      return res.status(403).json({ error: "Forbidden: You are not the author of this comment" });
+    }
+    await prisma.comment.delete({
+      where: { id }
+    });
+    return res.status(200).json({ success: true, message: "Comment deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting comment:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};

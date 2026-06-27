@@ -14,21 +14,23 @@ const normalizeName = (name) => {
     .trim()
     .replace(/&/g, "and")
     .replace(
-      /jp\s*morgan\s*chase|jp\s*morgan|jpmc|j.p.\s*morgan\s*chase|j.p.\s*morgan/g,
+      /\bjp\s*morgan\s*chase\b|\bjp\s*morgan\b|\bjpmc\b|\bj\.p\.\s*morgan\s*chase\b|\bj\.p\.\s*morgan\b/g,
       "jpmorganchase",
     )
-    .replace(/ibm\s*india|ibm/g, "ibmindia")
-    .replace(/texas\s*instruments?|\bti\b/g, "texasinstrument")
-    .replace(/fast\s*retailing\s*\(japan\)|fast\s*retailing/g, "fastretailing")
-    .replace(/google\s*silicon/g, "googlesilicon")
-    .replace(/de\s*shaw\s*&\s*co|de\s*shaw/g, "deshaw")
-    .replace(/cisco/g, "cisco")
-    .replace(/samsung\s*bangalore|samsung\s*delhi|samsung\s*india/g, "samsung")
-    .replace(/samsung/g, "samsung")
-    .replace(/bharat\s*petroleum/g, "bpcl")
-    .replace(/nxp\s*semiconductors?/g, "nxpsemiconductor")
-    .replace(/z\s*scal[ae]r/g, "zscaler")
-    .replace(/eil\s*psu/g, "eil")
+    .replace(/\bibm\s*india\b|\bibm\b/g, "ibmindia")
+    .replace(/\btexas\s*instruments?\b|\bti\b/g, "texasinstrument")
+    .replace(/\bfast\s*retailing\s*\(japan\)|\bfast\s*retailing\b/g, "fastretailing")
+    .replace(/\bgoogle\s*silicon\b/g, "googlesilicon")
+    .replace(/\bde\s*shaw\s*&\s*co\b|\bde\s*shaw\b/g, "deshaw")
+    .replace(/\bsamsung\s*bangalore\b|\bsamsung\s*delhi\b|\bsamsung\s*india\b|\bsamsung\b/g, "samsung")
+    .replace(/\bbharat\s*petroleum\b/g, "bpcl")
+    .replace(/\bnxp\s*semiconductors?\b/g, "nxpsemiconductor")
+    .replace(/\bz\s*scal[ae]r\b/g, "zscaler")
+    .replace(/\beil\s*psu\b|\beil\b/g, "eil")
+    .replace(/\bhcl\s*tech\b|\bhcl\b/g, "hcl")
+    .replace(/\bzs\s*associates?\b|\bzs\b/g, "zsassociate")
+    .replace(/\bsiemens\s*eda\b|\bsiemens\b/g, "siemens")
+    .replace(/\baccenture\s*interview\s*problems\s*all\b|\baccenture\b/g, "accenture")
     .replace(/[^a-z0-9]/g, "");
   return norm;
 };
@@ -220,6 +222,32 @@ const getSlugFromUrl = (url, title) => {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 };
 
+const getDisplayName = (rawName) => {
+  const customDisplayNames = {
+    deshaw: "DE Shaw",
+    jpmorganchase: "J.P. Morgan Chase",
+    bpcl: "BPCL",
+    ibmindia: "IBM India",
+    texasinstrument: "Texas Instruments",
+    fastretailing: "Fast Retailing",
+    googlesilicon: "Google Silicon",
+    samsung: "Samsung",
+    nxpsemiconductor: "NXP Semiconductors",
+    zscaler: "Zscaler",
+    eil: "EIL",
+    sedemac: "Sedemac",
+    pharmeasy: "PharmEasy",
+    "bain and company": "Bain & Company",
+    "dsp mutual fund": "DSP Mutual Fund",
+  };
+  const norm = normalizeName(rawName);
+  if (customDisplayNames[norm]) return customDisplayNames[norm];
+  return rawName
+    .split(" ")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+};
+
 async function main() {
   console.log("Reading company_questions.json from path:", jsonPath);
   if (!fs.existsSync(jsonPath)) {
@@ -231,6 +259,7 @@ async function main() {
   const companyQuestions = data.companyQuestions;
 
   console.log("Cleaning existing company & question data...");
+  await prisma.placement.deleteMany({});
   await prisma.companyQuestion.deleteMany({});
   await prisma.interviewSet.deleteMany({});
   await prisma.questionTag.deleteMany({});
@@ -239,10 +268,14 @@ async function main() {
   await prisma.company.deleteMany({});
 
   console.log("Seeding companies, questions, tags, and mapping records...");
+  const companySlugToIdMap = {};
   
   for (const [companyName, questions] of Object.entries(companyQuestions)) {
     const compSlug = normalizeName(companyName);
     const logoUrl = getCompanyLogoUrl(companyName);
+
+    // Get metadata from companiesMetadata
+    const metadata = data.companiesMetadata ? data.companiesMetadata[companyName] : null;
 
     // 1. Create Company
     const company = await prisma.company.create({
@@ -251,8 +284,15 @@ async function main() {
         slug: compSlug,
         logoUrl,
         questionCount: questions.length,
+        eligibilityCriteria: metadata ? metadata.eligibility_criteria : null,
+        roundsInfo: metadata ? metadata.rounds_info : null,
+        oaPlatform: metadata ? metadata.oa_platform : null,
+        topTopics: metadata ? metadata.top_topics_and_questions : [],
+        otherInfo: metadata ? metadata.other_relevant_information : null,
       },
     });
+
+    companySlugToIdMap[compSlug] = company.id;
 
     let easyCount = 0;
     let mediumCount = 0;
@@ -356,7 +396,42 @@ async function main() {
       },
     });
     
-    console.log(`Seeded company: ${companyName} (${compSlug}) with ${questions.length} questions.`);
+  }
+
+  console.log("Seeding NSUT placements...");
+  const placementsPath = path.join(__dirname, '../nsut_placements.json');
+  if (fs.existsSync(placementsPath)) {
+    const placementsRaw = fs.readFileSync(placementsPath, 'utf8');
+    const placementsData = JSON.parse(placementsRaw);
+    let skippedCount = 0;
+    let seededCount = 0;
+    for (const p of placementsData) {
+      const normCompany = normalizeName(p.company);
+      let companyId = companySlugToIdMap[normCompany];
+
+      if (!companyId) {
+        skippedCount++;
+        continue;
+      }
+
+      await prisma.placement.create({
+        data: {
+          companyId,
+          companyName: getDisplayName(p.company),
+          role: p.role,
+          ctcLpa: p.ctc_lpa ? parseFloat(p.ctc_lpa) : null,
+          stipendMonth: p.stipend_month ? parseFloat(p.stipend_month) : null,
+          type: p.type,
+          category: p.category,
+          eligibleBranches: p.eligible_branches || [],
+          minCgpa: p.min_cgpa ? parseFloat(p.min_cgpa) : null,
+        },
+      });
+      seededCount++;
+    }
+    console.log(`Seeded ${seededCount} placement records. Skipped ${skippedCount} placements for companies with no questions/metadata.`);
+  } else {
+    console.log("Placements file not found at:", placementsPath);
   }
 
   console.log("Seeding database complete!");

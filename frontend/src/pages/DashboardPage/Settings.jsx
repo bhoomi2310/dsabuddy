@@ -1,8 +1,20 @@
 import { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, User, Link2 } from 'lucide-react';
-import { Modal } from '@/components/common';
+import { Modal, Card, Button, Input } from '@/components/common';
 import { userService, platformService } from '@/api/services';
 import { BRANCHES } from '@/config/constants';
+
+import leetcodeLogo from '@/assets/Leetcode Icon 24 copy.png';
+import codeforcesLogo from '@/assets/Codeforces Icon 24.png';
+import codechefLogo from '@/assets/Codechef Icon 48.png';
+import gfgLogo from '@/assets/Geeksforgeeks Icon 48.png';
+
+const platformLogos = {
+  leetcode: leetcodeLogo,
+  codeforces: codeforcesLogo,
+  codechef: codechefLogo,
+  gfg: gfgLogo,
+};
 
 const settingSections = [
   {
@@ -212,23 +224,25 @@ export function Settings({ user: propUser, platforms, onUpdate }) {
         {settingSections.map((section) => {
           const Icon = iconMap[section.icon];
           return (
-            <div key={section.title} className="bg-[#161B22] rounded-xl p-6 border border-[#1F2937] hover:border-[#35b9f1]/20 transition-all">
+            <Card key={section.title} variant="default" className="rounded-xl hover:border-[#35b9f1]/20">
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-[#35b9f1]/10 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-[#35b9f1]/10 rounded-lg flex items-center justify-center shrink-0">
                   <Icon className="w-6 h-6 text-[#35b9f1]" />
                 </div>
                 <div className="flex-1">
                   <h3 className="text-[#E5E7EB] font-bold text-lg font-Spline-Sans mb-2">{section.title}</h3>
                   <p className="text-[#6B7280] text-sm font-JetBrains-Mono mb-4">{section.description}</p>
-                  <button 
+                  <Button 
                     onClick={() => setOpenModal(section.id)}
-                    className="px-4 py-2 bg-[#35b9f1] hover:bg-[#10a3e0] text-[#0D1117] font-semibold rounded-lg transition-colors font-JetBrains-Mono text-sm"
+                    variant="accent"
+                    size="sm"
+                    className="font-JetBrains-Mono text-sm rounded-lg px-4 py-2"
                   >
                     Configure
-                  </button>
+                  </Button>
                 </div>
               </div>
-            </div>
+            </Card>
           );
         })}
       </div>
@@ -240,25 +254,22 @@ export function Settings({ user: propUser, platforms, onUpdate }) {
         title="Profile Settings"
       >
         <div className="space-y-4">
-          <div>
-            <label className="block text-[#E5E7EB] text-sm font-medium mb-2 font-Spline-Sans">Name</label>
-            <input
-              type="text"
-              value={profileData.name}
-              onChange={(e) => handleProfileChange('name', e.target.value)}
-              className="w-full bg-[#0D1117] border border-[#1F2937] rounded-lg px-4 py-2.5 text-[#E5E7EB] focus:outline-none focus:border-[#35b9f1] transition-colors font-JetBrains-Mono"
-            />
-          </div>
+          <Input
+            label="Name"
+            value={profileData.name}
+            onChange={(e) => handleProfileChange('name', e.target.value)}
+            labelClassName="font-medium text-[#E5E7EB] font-Spline-Sans normal-case text-sm mb-2 block"
+            inputClassName="py-2.5 border-[#1F2937]"
+          />
 
-          <div>
-            <label className="block text-[#E5E7EB] text-sm font-medium mb-2 font-Spline-Sans">Email</label>
-            <input
-              type="email"
-              value={profileData.email}
-              onChange={(e) => handleProfileChange('email', e.target.value)}
-              className="w-full bg-[#0D1117] border border-[#1F2937] rounded-lg px-4 py-2.5 text-[#E5E7EB] focus:outline-none focus:border-[#35b9f1] transition-colors font-JetBrains-Mono"
-            />
-          </div>
+          <Input
+            label="Email"
+            type="email"
+            value={profileData.email}
+            onChange={(e) => handleProfileChange('email', e.target.value)}
+            labelClassName="font-medium text-[#E5E7EB] font-Spline-Sans normal-case text-sm mb-2 block"
+            inputClassName="py-2.5 border-[#1F2937]"
+          />
 
           <div>
             <label className="block text-[#E5E7EB] text-sm font-medium mb-2 font-Spline-Sans">Avatar</label>
@@ -316,43 +327,45 @@ export function Settings({ user: propUser, platforms, onUpdate }) {
               )}
             </div>
 
-            <div>
-              <label className="block text-[#E5E7EB] text-sm font-medium mb-2 font-Spline-Sans">Year</label>
-              <input
-                type="text"
-                value={profileData.year}
-                onChange={(e) => handleProfileChange('year', e.target.value)}
-                className="w-full bg-[#0D1117] border border-[#1F2937] rounded-lg px-4 py-2.5 text-[#E5E7EB] focus:outline-none focus:border-[#35b9f1] transition-colors font-JetBrains-Mono"
-              />
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-[#1F2937]">
-            <label className="block text-[#E5E7EB] text-sm font-medium mb-2 font-Spline-Sans">Confirm Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password to save changes"
-              className="w-full bg-[#0D1117] border border-[#1F2937] rounded-lg px-4 py-2.5 text-[#E5E7EB] placeholder-[#6B7280] focus:outline-none focus:border-[#35b9f1] transition-colors font-JetBrains-Mono"
+            <Input
+              label="Year"
+              value={profileData.year}
+              onChange={(e) => handleProfileChange('year', e.target.value)}
+              labelClassName="font-medium text-[#E5E7EB] font-Spline-Sans normal-case text-sm mb-2 block"
+              inputClassName="py-2.5 border-[#1F2937]"
             />
           </div>
+
+          <Input
+            label="Confirm Password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter your password to save changes"
+            labelClassName="font-medium text-[#E5E7EB] font-Spline-Sans normal-case text-sm mb-2 block"
+            inputClassName="py-2.5 border-[#1F2937]"
+            className="pt-4 border-t border-[#1F2937]"
+          />
 
           {error && <p className="text-red-500 text-sm mt-2 font-JetBrains-Mono">{error}</p>}
 
           <div className="flex gap-3 pt-4">
-            <button
+            <Button
               onClick={handleCloseModal}
-              className="flex-1 px-4 py-2.5 bg-[#1F2937] hover:bg-[#374151] text-[#E5E7EB] font-semibold rounded-lg transition-colors font-JetBrains-Mono"
+              variant="outline"
+              size="sm"
+              className="flex-1 font-JetBrains-Mono text-sm rounded-lg"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleSave}
-              className="flex-1 px-4 py-2.5 bg-[#35b9f1] hover:bg-[#10a3e0] text-[#0D1117] font-semibold rounded-lg transition-colors font-JetBrains-Mono"
+              variant="accent"
+              size="sm"
+              className="flex-1 font-JetBrains-Mono text-sm rounded-lg"
             >
               Save Changes
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>
@@ -367,10 +380,12 @@ export function Settings({ user: propUser, platforms, onUpdate }) {
           {platformData.map((platform) => (
             <div key={platform.id} className="bg-[#0D1117] border border-[#1F2937] rounded-lg p-4">
               <div className="flex items-center gap-3 mb-4">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  platform.synced ? 'bg-[#10B981]/10' : 'bg-[#6B7280]/10'
-                }`}>
-                  <span className="text-lg font-bold font-Spline-Sans">{platform.name[0]}</span>
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[#161B22] border border-[#1F2937] overflow-hidden">
+                  <img
+                    src={platformLogos[platform.id]}
+                    alt={platform.name}
+                    className={`w-6 h-6 object-contain ${platform.synced ? '' : 'grayscale opacity-40'}`}
+                  />
                 </div>
                 <div className="flex-1">
                   <h4 className="text-[#E5E7EB] font-semibold font-Spline-Sans">{platform.name}</h4>
@@ -383,15 +398,13 @@ export function Settings({ user: propUser, platforms, onUpdate }) {
               </div>
 
               <div className="space-y-3">
-                <div>
-                  <label className="block text-[#9CA3AF] text-xs font-medium mb-1.5 font-Spline-Sans">Username</label>
-                  <input
-                    type="text"
-                    value={platform.username}
-                    onChange={(e) => handlePlatformChange(platform.id, 'username', e.target.value)}
-                    className="w-full bg-[#161B22] border border-[#1F2937] rounded-lg px-3 py-2 text-[#E5E7EB] text-sm focus:outline-none focus:border-[#35b9f1] transition-colors font-JetBrains-Mono"
-                  />
-                </div>
+                <Input
+                  label="Username"
+                  value={platform.username}
+                  onChange={(e) => handlePlatformChange(platform.id, 'username', e.target.value)}
+                  labelClassName="font-medium text-[#9CA3AF] font-Spline-Sans normal-case text-xs mb-1.5 block"
+                  inputClassName="py-2 px-3 border-[#1F2937] text-sm bg-[#161B22]"
+                />
 
                 <div className="flex items-center justify-between">
                   <span className="text-[#9CA3AF] text-xs font-Spline-Sans">Sync Status</span>
@@ -412,18 +425,22 @@ export function Settings({ user: propUser, platforms, onUpdate }) {
           {error && <p className="text-red-500 text-sm mt-2 font-JetBrains-Mono">{error}</p>}
 
           <div className="flex gap-3 pt-4">
-            <button
+            <Button
               onClick={handleCloseModal}
-              className="flex-1 px-4 py-2.5 bg-[#1F2937] hover:bg-[#374151] text-[#E5E7EB] font-semibold rounded-lg transition-colors font-JetBrains-Mono"
+              variant="outline"
+              size="sm"
+              className="flex-1 font-JetBrains-Mono text-sm rounded-lg"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleSave}
-              className="flex-1 px-4 py-2.5 bg-[#35b9f1] hover:bg-[#10a3e0] text-[#0D1117] font-semibold rounded-lg transition-colors font-JetBrains-Mono"
+              variant="accent"
+              size="sm"
+              className="flex-1 font-JetBrains-Mono text-sm rounded-lg"
             >
               Save Changes
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>

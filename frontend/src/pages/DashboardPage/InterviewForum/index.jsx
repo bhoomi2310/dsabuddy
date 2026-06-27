@@ -1,12 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Search, Plus, ArrowLeft, Calendar, Send, X, ShieldAlert, ChevronUp, ChevronDown, Bold, Italic, Heading1, Heading2, List, Link, Code, Image as ImageIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { MessageSquare, Search, Plus, ArrowLeft, Calendar, Send, X, ShieldAlert, ChevronUp, ChevronDown, Bold, Italic, Heading1, Heading2, List, Link, Code, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { forumService } from '@/api/services/forumService';
-import { Badge, Button } from '@/components/common';
+import { Badge, Button, Card, Input } from '@/components/common';
 import apiClient from '@/api/client';
+import { useUserStore } from '@/store/useUserStore';
+import { getErrorMessage } from '@/utils';
 
 // Recursive Comment Node Component
 // Recursive Comment Node Component
-function CommentNode({ comment, depth = 0, onAddReply, formatDate }) {
+function CommentNode({ comment, depth = 0, onAddReply, onDeleteComment, formatDate }) {
+  const navigate = useNavigate();
+  const loggedInUser = useUserStore((state) => state.user);
   const [replying, setReplying] = useState(false);
   const [replyContent, setReplyContent] = useState('');
   const [collapsed, setCollapsed] = useState(false);
@@ -45,7 +50,12 @@ function CommentNode({ comment, depth = 0, onAddReply, formatDate }) {
       
       {collapsed ? (
         <div className="bg-[#0D1117]/30 border border-[#1F2937]/50 rounded-xl p-3 flex items-center justify-between hover:border-[#35b9f1]/10 transition-all duration-300">
-          <div className="flex items-center gap-3">
+          <div 
+            className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => {
+              if (comment.author?.userName) navigate(`/profile/${comment.author.userName}`);
+            }}
+          >
             <img
               src={comment.author?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.author?.name || 'Anonymous'}`}
               alt="avatar"
@@ -71,9 +81,18 @@ function CommentNode({ comment, depth = 0, onAddReply, formatDate }) {
         </div>
       ) : (
         <>
-          <div className="bg-[#0D1117]/60 border border-[#1F2937] rounded-xl p-5 space-y-3 relative hover:border-[#35b9f1]/10 transition-all duration-300">
+          <Card 
+            variant="accent" 
+            animated={false} 
+            className="p-5 space-y-3 relative hover:border-[#35b9f1]/10 transition-all duration-300 rounded-xl"
+          >
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+              <div 
+                className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => {
+                  if (comment.author?.userName) navigate(`/profile/${comment.author.userName}`);
+                }}
+              >
                 <img
                   src={comment.author?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.author?.name || 'Anonymous'}`}
                   alt="avatar"
@@ -105,7 +124,7 @@ function CommentNode({ comment, depth = 0, onAddReply, formatDate }) {
             </p>
 
             {/* Reply Action Row */}
-            <div className="pl-11 pt-1">
+            <div className="pl-11 pt-1 flex items-center gap-4">
               <button
                 onClick={() => setReplying(!replying)}
                 className="text-[#35b9f1] hover:text-[#6fd3ff] text-xs font-bold font-Spline-Sans transition-colors flex items-center gap-1.5 cursor-pointer"
@@ -113,38 +132,56 @@ function CommentNode({ comment, depth = 0, onAddReply, formatDate }) {
                 <MessageSquare className="w-3.5 h-3.5" />
                 Reply
               </button>
+              {(loggedInUser?.id === comment.author?.id || loggedInUser?.role === 'admin') && (
+                <button
+                  onClick={() => {
+                    if (window.confirm("Are you sure you want to delete this comment?")) {
+                      onDeleteComment(comment.id);
+                    }
+                  }}
+                  className="text-red-500 hover:text-red-400 text-xs font-bold font-Spline-Sans transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete
+                </button>
+              )}
             </div>
 
             {/* Inline Reply Input */}
             {replying && (
               <form onSubmit={handleReplySubmit} className="pl-11 pt-2 flex gap-3 items-center">
-                <input
+                <Input
                   type="text"
                   placeholder={`Reply to ${comment.author?.name || 'Anonymous'}...`}
                   value={replyContent}
                   onChange={(e) => setReplyContent(e.target.value)}
-                  className="flex-1 bg-[#0D1117] border border-[#1F2937] rounded-lg px-3 py-2 text-xs text-[#E5E7EB] placeholder-[#6B7280] focus:outline-none focus:border-[#35b9f1]/30 transition-all font-Spline-Sans"
+                  className="flex-1"
+                  inputClassName="py-2 text-xs border-[#1F2937]/30 bg-[#0D1117] rounded-lg"
                   autoFocus
                 />
                 <div className="flex gap-2 shrink-0">
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setReplying(false)}
-                    className="px-2.5 py-1.5 rounded-lg border border-[#1F2937] text-xs font-bold text-[#9CA3AF] hover:text-white hover:border-[#1F2937]/80 cursor-pointer"
+                    variant="outline"
+                    size="sm"
+                    className="px-2.5 py-1.5 rounded-lg border-[#1F2937] text-xs font-bold"
                   >
                     Cancel
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="submit"
                     disabled={!replyContent.trim()}
-                    className="bg-[#35b9f1] hover:bg-[#10a3e0] disabled:bg-[#1F2937] disabled:text-[#6B7280] text-[#0D1117] font-extrabold rounded-lg px-3 py-1.5 transition-all text-xs cursor-pointer"
+                    variant="accent"
+                    size="sm"
+                    className="rounded-lg px-3 py-1.5 text-xs font-bold"
                   >
                     Submit
-                  </button>
+                  </Button>
                 </div>
               </form>
             )}
-          </div>
+          </Card>
 
           {/* Render nested replies recursively */}
           {comment.replies && comment.replies.length > 0 && (
@@ -155,6 +192,7 @@ function CommentNode({ comment, depth = 0, onAddReply, formatDate }) {
                   comment={reply} 
                   depth={depth + 1} 
                   onAddReply={onAddReply} 
+                  onDeleteComment={onDeleteComment}
                   formatDate={formatDate} 
                 />
               ))}
@@ -238,6 +276,8 @@ const parseMarkdownToHTML = (text) => {
 };
 
 export function InterviewForum() {
+  const navigate = useNavigate();
+  const loggedInUser = useUserStore((state) => state.user);
   const [posts, setPosts] = useState([]);
   const [selectedPost, setSelectedPost] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -476,9 +516,55 @@ export function InterviewForum() {
       setShowCreateModal(false);
     } catch (err) {
       console.error('Failed to publish post:', err);
-      setPostError('Error occurred while publishing your experience.');
+      setPostError(getErrorMessage(err));
     } finally {
       setSubmittingPost(false);
+    }
+  };
+
+  const handleDeletePost = async (postId) => {
+    try {
+      await forumService.deletePost(postId);
+      setPosts(prev => prev.filter(p => p.id !== postId));
+      setSelectedPost(null);
+    } catch (err) {
+      console.error("Failed to delete post:", err);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (!selectedPost) return;
+    try {
+      await forumService.deleteComment(commentId);
+      
+      const getDescendantIds = (cId, allComments) => {
+        const directChildren = allComments.filter(c => c.parentId === cId);
+        let ids = [cId];
+        for (const child of directChildren) {
+          ids = [...ids, ...getDescendantIds(child.id, allComments)];
+        }
+        return ids;
+      };
+
+      const descendantIds = getDescendantIds(commentId, selectedPost.comments || []);
+      const countDeleted = descendantIds.length;
+
+      setSelectedPost(prev => ({
+        ...prev,
+        comments: (prev.comments || []).filter(c => !descendantIds.includes(c.id)),
+      }));
+
+      setPosts(prev => prev.map(p => {
+        if (p.id === selectedPost.id) {
+          return {
+            ...p,
+            commentCount: Math.max(0, (p.commentCount || 0) - countDeleted),
+          };
+        }
+        return p;
+      }));
+    } catch (err) {
+      console.error("Failed to delete comment:", err);
     }
   };
 
@@ -568,19 +654,26 @@ export function InterviewForum() {
       {/* Detail Post View */}
       {selectedPost ? (
         <div className="space-y-6">
-          <button
+          <Button
             onClick={() => { setSelectedPost(null); fetchPosts(); }}
-            className="flex items-center gap-2 text-sm font-extrabold text-[#9CA3AF] hover:text-white transition-colors cursor-pointer"
+            variant="outline"
+            size="sm"
+            className="text-[#9CA3AF] hover:text-white border-none bg-transparent hover:bg-neutral-900/40 px-3 py-1.5"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Forum
-          </button>
+          </Button>
 
-          <div className="bg-[#161B22] border border-[#1F2937] rounded-2xl p-6 md:p-8 space-y-6">
+          <Card variant="default" animated={false} className="rounded-2xl p-6 md:p-8 space-y-6">
             
             {/* Header info */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#1F2937] pb-6">
-              <div className="flex items-center gap-4">
+              <div 
+                className="flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => {
+                  if (selectedPost.author?.userName) navigate(`/profile/${selectedPost.author.userName}`);
+                }}
+              >
                 <img
                   src={selectedPost.author?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedPost.author?.name || 'Anonymous'}`}
                   alt="avatar"
@@ -595,9 +688,25 @@ export function InterviewForum() {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-[#9CA3AF] text-xs font-semibold font-mono">
-                <Calendar className="w-4 h-4" />
-                {formatDate(selectedPost.createdAt)}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 text-[#9CA3AF] text-xs font-semibold font-mono">
+                  <Calendar className="w-4 h-4" />
+                  {formatDate(selectedPost.createdAt)}
+                </div>
+                {(loggedInUser?.id === selectedPost.author?.id || loggedInUser?.role === 'admin') && (
+                  <button
+                    onClick={() => {
+                      if (window.confirm("Are you sure you want to delete this experience post? This will delete all comments and cannot be undone.")) {
+                        handleDeletePost(selectedPost.id);
+                      }
+                    }}
+                    className="text-red-500 hover:text-red-400 p-2 rounded-xl bg-[#0D1117] border border-[#1F2937] hover:bg-neutral-900 hover:border-neutral-800 transition-all cursor-pointer flex items-center gap-1.5 font-bold text-xs"
+                    title="Delete Post"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                )}
               </div>
             </div>
 
@@ -699,6 +808,7 @@ export function InterviewForum() {
                       key={comment.id} 
                       comment={comment} 
                       onAddReply={handleAddCommentOrReply}
+                      onDeleteComment={handleDeleteComment}
                       formatDate={formatDate}
                     />
                   ))
@@ -710,7 +820,7 @@ export function InterviewForum() {
               </div>
             </div>
 
-          </div>
+          </Card>
         </div>
       ) : (
         
@@ -718,9 +828,9 @@ export function InterviewForum() {
         <div className="space-y-8">
           
           {/* Title Banner */}
-          <div className="bg-[#161B22] border border-[#1F2937] rounded-3xl p-8 md:p-10 relative overflow-hidden shadow-lg">
-            <div className="absolute inset-0 bg-[#0D1117]/10 backdrop-blur-[2px]" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#35b9f1]/10 via-[#35b9f1]/3 to-transparent opacity-30" />
+          <Card variant="default" animated={false} className="rounded-3xl p-8 md:p-10 relative overflow-hidden shadow-lg border-[#1F2937]">
+            <div className="absolute inset-0 bg-[#0D1117]/10 backdrop-blur-[2px] pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#35b9f1]/10 via-[#35b9f1]/3 to-transparent opacity-30 pointer-events-none" />
             
             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div className="space-y-2">
@@ -739,20 +849,19 @@ export function InterviewForum() {
                 Share Experience
               </Button>
             </div>
-          </div>
+          </Card>
 
           {/* Search & Select tag filtering */}
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="relative w-full md:w-80">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6B7280]" />
-              <input
-                type="text"
-                placeholder="Search experiences..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#161B22] border border-[#1F2937] rounded-xl pl-10 pr-4 py-2.5 text-[#E5E7EB] text-sm focus:outline-none focus:border-[#35b9f1]/30 transition-all font-Spline-Sans"
-              />
-            </div>
+            <Input
+              type="text"
+              placeholder="Search experiences..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              icon={Search}
+              className="w-full md:w-80"
+              inputClassName="py-2.5 bg-[#161B22] border-[#1F2937] rounded-xl"
+            />
             
             <div className="flex flex-wrap gap-2 w-full md:w-auto items-center justify-start md:justify-end">
               <span className="text-[#6B7280] text-xs font-bold font-mono mr-2">Filter Tag:</span>
@@ -767,13 +876,15 @@ export function InterviewForum() {
                 ))}
               </select>
               {selectedTag && (
-                <button
+                <Button
                   onClick={() => setSelectedTag('')}
-                  className="p-2.5 hover:bg-[#161B22] rounded-xl border border-[#1F2937] text-red-400 hover:text-red-300 transition-all cursor-pointer"
+                  variant="outline"
+                  size="sm"
+                  className="p-2.5 hover:bg-[#161B22] rounded-xl border-[#1F2937] text-red-400 hover:text-red-300 h-[38px] flex items-center justify-center"
                   title="Clear tag filter"
                 >
                   <X className="w-4 h-4" />
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -802,14 +913,23 @@ export function InterviewForum() {
           {/* Posts Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {posts.map((post) => (
-              <div
+              <Card
                 key={post.id}
+                variant="default"
                 onClick={() => fetchPostDetail(post.id)}
-                className="bg-[#161B22] border border-[#1F2937] hover:border-[#35b9f1]/20 rounded-2xl p-6 flex flex-col justify-between cursor-pointer transition-all duration-300 group hover:-translate-y-1 hover:shadow-xl hover:shadow-[#0d1117]/80"
+                className="p-6 flex flex-col justify-between cursor-pointer hover:border-[#35b9f1]/20 rounded-2xl w-full h-auto"
               >
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                    <div 
+                      className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={(e) => {
+                        if (post.author?.userName) {
+                          e.stopPropagation();
+                          navigate(`/profile/${post.author.userName}`);
+                        }
+                      }}
+                    >
                       <img
                         src={post.author?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.author?.name || 'Anonymous'}`}
                         alt="avatar"
@@ -900,7 +1020,7 @@ export function InterviewForum() {
                   </div>
                 </div>
 
-              </div>
+              </Card>
             ))}
 
             {loading && (
@@ -977,17 +1097,17 @@ export function InterviewForum() {
                   </div>
                 )}
 
-                <div className="space-y-1.5 shrink-0">
-                  <label className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Experience Title</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Google SWE FTE Interview Experience (On-Campus)"
-                    value={postTitle}
-                    onChange={(e) => setPostTitle(e.target.value)}
-                    className="w-full bg-[#0D1117] border border-[#1F2937] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#35b9f1]/30 transition-all font-Spline-Sans"
-                    required
-                  />
-                </div>
+                <Input
+                  label="Experience Title"
+                  type="text"
+                  placeholder="e.g. Google SWE FTE Interview Experience (On-Campus)"
+                  value={postTitle}
+                  onChange={(e) => setPostTitle(e.target.value)}
+                  labelClassName="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider mb-1.5 block normal-case"
+                  inputClassName="py-3 bg-[#0D1117] border-[#1F2937] rounded-xl focus:border-[#35b9f1]/30"
+                  required
+                  className="shrink-0"
+                />
 
                 {activeTab === 'write' ? (
                   <div className="space-y-4 flex-1 flex flex-col min-h-0">
@@ -1120,19 +1240,19 @@ export function InterviewForum() {
                       </span>
                     </div>
 
-                    <div className="space-y-1.5 shrink-0">
-                      <label className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Filter Tags (Comma separated)</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Google, SWE, Internship, On-Campus"
-                        value={postTags}
-                        onChange={(e) => setPostTags(e.target.value)}
-                        className="w-full bg-[#0D1117] border border-[#1F2937] rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#35b9f1]/30 transition-all font-Spline-Sans"
-                      />
-                      <span className="text-[10px] text-[#6B7280] block font-mono">
-                        Separate tags with commas. Popular: Google, Amazon, System Design, HR Round.
-                      </span>
-                    </div>
+                    <Input
+                      label="Filter Tags (Comma separated)"
+                      type="text"
+                      placeholder="e.g. Google, SWE, Internship, On-Campus"
+                      value={postTags}
+                      onChange={(e) => setPostTags(e.target.value)}
+                      labelClassName="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider mb-1.5 block normal-case"
+                      inputClassName="py-3 bg-[#0D1117] border-[#1F2937] rounded-xl focus:border-[#35b9f1]/30"
+                      className="shrink-0"
+                    />
+                    <span className="text-[10px] text-[#6B7280] block font-mono mt-1">
+                      Separate tags with commas. Popular: Google, Amazon, System Design, HR Round.
+                    </span>
                   </div>
                 ) : (
                   /* Live Preview Tab */
@@ -1157,17 +1277,21 @@ export function InterviewForum() {
               </div>
 
               <div className="flex gap-3 justify-end p-6 border-t border-[#1F2937] bg-[#161B22] shrink-0">
-                <button
+                <Button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-5 py-2.5 rounded-xl border border-[#1F2937] text-sm font-extrabold text-[#9CA3AF] hover:text-white hover:border-[#1F2937]/85 transition-all cursor-pointer"
+                  variant="outline"
+                  size="sm"
+                  className="px-5 py-2.5 rounded-xl border-[#1F2937] text-sm font-extrabold text-[#9CA3AF] hover:text-white transition-all"
                 >
                   Cancel
-                </button>
+                </Button>
                 <Button
                   type="submit"
                   disabled={submittingPost}
-                  className="bg-[#35b9f1] hover:bg-[#10a3e0] text-[#0D1117] font-extrabold rounded-xl px-6 py-2.5 transition-all cursor-pointer"
+                  variant="accent"
+                  size="sm"
+                  className="rounded-xl px-6 py-2.5 font-extrabold"
                 >
                   {submittingPost ? 'Publishing...' : 'Publish Experience'}
                 </Button>

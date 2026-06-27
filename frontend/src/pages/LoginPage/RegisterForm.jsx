@@ -44,6 +44,11 @@ export const RegisterForm = () => {
     e.preventDefault();
     setError("");
 
+    if (!formData.email.toLowerCase().endsWith("@nsut.ac.in")) {
+      setError("Only NSUT email addresses (@nsut.ac.in) are allowed to register.");
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setError("Password do not match");
       return;

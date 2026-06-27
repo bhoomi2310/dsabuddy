@@ -7,7 +7,8 @@ import {
   fetchLeetCodeUserStats,
 } from "./leetcode.js";
 import { fetchCodechefUserStats } from "./codechef.js";
-import { fetchGfgUserStats } from "./gfg.js";
+import { fetchGfgUserStats, fetchGfgCalendar } from "./gfg.js";
+export { fetchGfgCalendar };
 
 export async function syncProblems({
   prisma,

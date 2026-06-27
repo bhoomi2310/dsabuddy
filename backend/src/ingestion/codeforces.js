@@ -1,3 +1,4 @@
+
 import { fetchJson, sleep } from "./http.js";
 import { mapDifficultyFromCodeforcesRating, normalizeTag } from "./mappers.js";
 
@@ -138,6 +139,7 @@ export async function fetchCodeforcesUserStats({ username }) {
     await sleep(1000);
 
     let problemsSolved = 0;
+    let topicBreakdown = {};
     try {
       const statusJson = await fetchJson(
         `${CODEFORCES_API_BASE}/user.status?handle=${username}`,
@@ -148,7 +150,14 @@ export async function fetchCodeforcesUserStats({ username }) {
         submissions.forEach((sub) => {
           if (sub.verdict === "OK" && sub.problem) {
             const probId = `${sub.problem.contestId}_${sub.problem.index}`;
-            uniqueSolved.add(probId);
+            if (!uniqueSolved.has(probId)) {
+              uniqueSolved.add(probId);
+              // Accumulate tags
+              const tags = sub.problem.tags || [];
+              tags.forEach((tag) => {
+                topicBreakdown[tag] = (topicBreakdown[tag] || 0) + 1;
+              });
+            }
           }
         });
         problemsSolved = uniqueSolved.size;
@@ -164,6 +173,7 @@ export async function fetchCodeforcesUserStats({ username }) {
       rankLabel: user.rank ?? null,
       maxRank: user.maxRank ?? null,
       problemsSolved,
+      topicBreakdown,
     };
   } catch (error) {
     console.error(`Error fetching Codeforces stats for ${username}:`, error);

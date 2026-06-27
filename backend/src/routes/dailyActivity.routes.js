@@ -13,9 +13,11 @@ import {
 
 const router = Router();
 
+// Publicly readable analytics (can bypass auth if userName query parameter is present)
+router.get("/analytics", authMiddleware, getUnifiedAnalytics);
+
 router.use(authMiddleware, ensureAuthenticated);
 
-router.get("/analytics", getUnifiedAnalytics);
 router.get("/", validate({ query: listDailyActivityQuerySchema }), listMyDailyActivity);
 router.post(
   "/increment",

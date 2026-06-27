@@ -7,7 +7,7 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ de
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const ComponentShowcase = lazy(() => import('./pages/ComponentShowcase'))
 const OnboardingPage = lazy(() => import('./pages/OnboardingPage'))
-const AboutPage = lazy(() => import('./pages/AboutPage'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage'))
 
 function ProtectedRoute({ children }) {
   const params = new URLSearchParams(window.location.search);
@@ -41,6 +41,7 @@ function App() {
           <Route path="/dashboard/pyqs/:companyName" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/dashboard/leaderboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/dashboard/settings" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+          <Route path="/profile/:username" element={<ProfilePage />} />
           <Route path={ROUTES.REGISTER} element={<PublicRoute><LoginPage /></PublicRoute>} />
           <Route path={ROUTES.LOGIN} element={<PublicRoute><LoginPage /></PublicRoute>} />
           <Route path={ROUTES.ONBOARDING} element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />

@@ -15,9 +15,10 @@ import {
 } from 'lucide-react';
 import { userService, platformService } from '@/api/services';
 import { useUserStore } from '@/store/useUserStore';
-import { Button } from '@/components/common';
+import { Button, Input } from '@/components/common';
 import apiClient from '@/api/client';
 import { BRANCHES } from '@/config/constants';
+import LogoImg from "@/assets/DSABuddy Logo.png";
 
 export default function OnboardingPage() {
   const navigate = useNavigate();
@@ -42,7 +43,6 @@ export default function OnboardingPage() {
 
   const [platforms, setPlatforms] = useState({
     leetcode: '',
-    hackerrank: '',
     codeforces: '',
     codechef: '',
     gfg: '',
@@ -257,9 +257,7 @@ export default function OnboardingPage() {
       {/* ── Navbar ── */}
       <header className="w-full max-w-7xl mx-auto px-6 py-5 flex items-center justify-between border-b border-gray-800 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#35b9f1] flex items-center justify-center text-black font-extrabold text-sm shadow-[0_0_12px_rgba(250,245,6,0.3)] select-none">
-            DB
-          </div>
+          <img src={LogoImg} alt="DSABuddy Logo" className="w-8 h-8 object-contain" />
           <span className="font-bold text-lg font-Spline-Sans text-white tracking-tight">
             DSABuddy
           </span>
@@ -346,21 +344,17 @@ export default function OnboardingPage() {
 
               {/* Username Input */}
               <div className="flex-1 flex flex-col relative pb-6">
-                <label className="text-xs font-bold text-gray-400 tracking-wider uppercase mb-1.5">
-                  What should we call you?
-                </label>
-                <label className="flex items-center bg-[#0D1117] border border-gray-600 rounded-xl px-5 py-4 shadow-inner onboarding-input-wrapper cursor-text transition-all">
-                  <IdCard className="w-5 h-5 text-gray-400 shrink-0" />
-                  <input 
-                    type="text" 
-                    name="userName"
-                    value={formData.userName}
-                    onChange={handleInputChange}
-                    placeholder="algorithm_wizard"
-                    required
-                    className="bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-white text-sm w-full ml-3 font-JetBrains-Mono placeholder-gray-500"
-                  />
-                </label>
+                <Input
+                  label="What should we call you?"
+                  icon={IdCard}
+                  name="userName"
+                  value={formData.userName}
+                  onChange={handleInputChange}
+                  placeholder="algorithm_wizard"
+                  required
+                  labelClassName="text-xs font-bold text-gray-400 tracking-wider uppercase mb-1.5 normal-case"
+                  inputClassName="py-4 border-gray-600 rounded-xl focus:border-[#35b9f1]"
+                />
                 <p className="text-[10px] font-JetBrains-Mono text-gray-400 absolute bottom-0 left-0">
                   This will be visible on the leaderboards.
                 </p>
@@ -394,84 +388,50 @@ export default function OnboardingPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 items-start">
                 
                 {/* LeetCode */}
-                <div className="flex flex-col gap-[6px]">
-                  <label className="text-[11px] font-bold text-gray-400 block tracking-wider uppercase">LeetCode ID</label>
-                  <label className="flex items-center bg-[#0D1117] border border-gray-600 rounded-xl px-5 py-4 shadow-inner mb-4 onboarding-input-wrapper cursor-text transition-all">
-                    <span className="text-gray-400 font-JetBrains-Mono text-xs select-none mr-2 font-bold">&gt;_</span>
-                    <input 
-                      type="text" 
-                      name="leetcode"
-                      value={platforms.leetcode}
-                      onChange={handlePlatformChange}
-                      placeholder="username"
-                      className="bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-white text-sm w-full font-JetBrains-Mono placeholder-gray-500"
-                    />
-                  </label>
-                </div>
+                <Input
+                  label="LeetCode ID"
+                  name="leetcode"
+                  value={platforms.leetcode}
+                  onChange={handlePlatformChange}
+                  placeholder="username"
+                  labelClassName="text-[11px] font-bold text-gray-400 block tracking-wider uppercase mb-1.5 normal-case"
+                  inputClassName="py-4 border-gray-600 rounded-xl focus:border-[#35b9f1]"
+                />
 
-                {/* HackerRank */}
-                <div className="flex flex-col gap-[6px]">
-                  <label className="text-[11px] font-bold text-gray-400 block tracking-wider uppercase">HackerRank ID</label>
-                  <label className="flex items-center bg-[#0D1117] border border-gray-600 rounded-xl px-5 py-4 shadow-inner mb-4 onboarding-input-wrapper cursor-text transition-all">
-                    <span className="text-gray-400 font-JetBrains-Mono text-xs select-none mr-2 font-bold">&gt;_</span>
-                    <input 
-                      type="text" 
-                      name="hackerrank"
-                      value={platforms.hackerrank}
-                      onChange={handlePlatformChange}
-                      placeholder="username"
-                      className="bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-white text-sm w-full font-JetBrains-Mono placeholder-gray-500"
-                    />
-                  </label>
-                </div>
+
 
                 {/* Codeforces */}
-                <div className="flex flex-col gap-[6px]">
-                  <label className="text-[11px] font-bold text-gray-400 block tracking-wider uppercase">Codeforces Handle</label>
-                  <label className="flex items-center bg-[#0D1117] border border-gray-600 rounded-xl px-5 py-4 shadow-inner mb-4 onboarding-input-wrapper cursor-text transition-all">
-                    <span className="text-gray-400 font-JetBrains-Mono text-xs select-none mr-2 font-bold ">&gt;_</span>
-                    <input 
-                      type="text" 
-                      name="codeforces"
-                      value={platforms.codeforces}
-                      onChange={handlePlatformChange}
-                      placeholder="handle"
-                      className="bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-white text-sm w-full font-JetBrains-Mono placeholder-gray-500"
-                    />
-                  </label>
-                </div>
+                <Input
+                  label="Codeforces Handle"
+                  name="codeforces"
+                  value={platforms.codeforces}
+                  onChange={handlePlatformChange}
+                  placeholder="handle"
+                  labelClassName="text-[11px] font-bold text-gray-400 block tracking-wider uppercase mb-1.5 normal-case"
+                  inputClassName="py-4 border-gray-600 rounded-xl focus:border-[#35b9f1]"
+                />
 
                 {/* CodeChef */}
-                <div className="flex flex-col gap-[6px]">
-                  <label className="text-[11px] font-bold text-gray-400 block tracking-wider uppercase">CodeChef ID</label>
-                  <label className="flex items-center bg-[#0D1117] border border-gray-600 rounded-xl px-5 py-4 shadow-inner onboarding-input-wrapper cursor-text transition-all">
-                    <span className="text-gray-400 font-JetBrains-Mono text-xs select-none mr-2 font-bold">&gt;_</span>
-                    <input 
-                      type="text" 
-                      name="codechef"
-                      value={platforms.codechef}
-                      onChange={handlePlatformChange}
-                      placeholder="username"
-                      className="bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-white text-sm w-full font-JetBrains-Mono placeholder-gray-500"
-                    />
-                  </label>
-                </div>
+                <Input
+                  label="CodeChef ID"
+                  name="codechef"
+                  value={platforms.codechef}
+                  onChange={handlePlatformChange}
+                  placeholder="username"
+                  labelClassName="text-[11px] font-bold text-gray-400 block tracking-wider uppercase mb-1.5 normal-case"
+                  inputClassName="py-4 border-gray-600 rounded-xl focus:border-[#35b9f1]"
+                />
 
                 {/* GFG */}
-                <div className="flex flex-col gap-[6px]">
-                  <label className="text-[11px] font-bold text-gray-400 block tracking-wider uppercase">GFG Handle</label>
-                  <label className="flex items-center bg-[#0D1117] border border-gray-600 rounded-xl px-5 py-4 shadow-inner onboarding-input-wrapper cursor-text transition-all">
-                    <span className="text-gray-400 font-JetBrains-Mono text-xs select-none mr-2 font-bold">&gt;_</span>
-                    <input 
-                      type="text" 
-                      name="gfg"
-                      value={platforms.gfg}
-                      onChange={handlePlatformChange}
-                      placeholder="username"
-                      className="bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-white text-sm w-full font-JetBrains-Mono placeholder-gray-500"
-                    />
-                  </label>
-                </div>
+                <Input
+                  label="GFG Handle"
+                  name="gfg"
+                  value={platforms.gfg}
+                  onChange={handlePlatformChange}
+                  placeholder="username"
+                  labelClassName="text-[11px] font-bold text-gray-400 block tracking-wider uppercase mb-1.5 normal-case"
+                  inputClassName="py-4 border-gray-600 rounded-xl focus:border-[#35b9f1]"
+                />
 
               </div>
             </div>

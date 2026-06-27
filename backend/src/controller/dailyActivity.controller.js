@@ -32,6 +32,51 @@ const toMidnightUTC = (d) => {
   );
 };
 
+/**
+ * Compute the current streak (consecutive active days ending today or yesterday)
+ * from a submission calendar map { unixTimestamp: count }.
+ */
+const computeCurrentStreak = (submissionCalendar) => {
+  if (!submissionCalendar || Object.keys(submissionCalendar).length === 0) return 0;
+
+  // Normalise every timestamp to its UTC midnight timestamp
+  const activeDaySet = new Set();
+  for (const tsStr of Object.keys(submissionCalendar)) {
+    const tsNum = Number(tsStr);
+    const d = new Date(tsNum * 1000);
+    const midnightTs = Math.floor(
+      Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) / 1000
+    );
+    activeDaySet.add(midnightTs);
+  }
+
+  // Today and yesterday midnight UTC (in seconds)
+  const nowUtc = new Date();
+  const todayTs = Math.floor(
+    Date.UTC(nowUtc.getUTCFullYear(), nowUtc.getUTCMonth(), nowUtc.getUTCDate()) / 1000
+  );
+  const yesterdayTs = todayTs - 86400;
+
+  // Streak must be active (last submission was today or yesterday)
+  let startTs = todayTs;
+  if (!activeDaySet.has(todayTs)) {
+    if (activeDaySet.has(yesterdayTs)) {
+      startTs = yesterdayTs;
+    } else {
+      return 0;
+    }
+  }
+
+  // Walk backwards from startTs
+  let streak = 0;
+  let cursor = startTs;
+  while (activeDaySet.has(cursor)) {
+    streak++;
+    cursor -= 86400;
+  }
+  return streak;
+};
+
 export const listMyDailyActivity = async (req, res) => {
   const userId = getAuthUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
@@ -91,11 +136,27 @@ import {
   fetchLeetCodeUserStats,
 } from "../ingestion/leetcode.js";
 import { fetchCodeforcesCalendar } from "../ingestion/codeforces.js";
+import { fetchGfgCalendar } from "../ingestion/index.js";
 
 export const getUnifiedAnalytics = async (req, res) => {
   try {
-    const userId = getAuthUserId(req);
-    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+    let userId = null;
+    const userNameParam = req.query.userName || req.query.username;
+
+    if (userNameParam) {
+      const targetUser = await prisma.user.findUnique({
+        where: { userName: userNameParam },
+        select: { id: true }
+      });
+      if (targetUser) {
+        userId = targetUser.id;
+      } else {
+        return res.status(404).json({ error: "User not found" });
+      }
+    } else {
+      userId = getAuthUserId(req);
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+    }
 
     const platform = req.query.platform ?? "all";
     const yearParam = req.query.year ? Number(req.query.year) : null;
@@ -107,6 +168,7 @@ export const getUnifiedAnalytics = async (req, res) => {
 
     const leetcodeConn = connections.find((c) => c.platform === "LEETCODE");
     const codeforcesConn = connections.find((c) => c.platform === "CODEFORCES");
+    const gfgConn = connections.find((c) => c.platform === "GFG");
 
     // Gather active years dynamically
     const yearsSet = new Set([new Date().getUTCFullYear()]);
@@ -153,6 +215,24 @@ export const getUnifiedAnalytics = async (req, res) => {
       }
     }
 
+    // GFG active years – derive from all submission timestamps
+    if (gfgConn) {
+      try {
+        const gfgData = await getCachedOrFetch(
+          `gfg_cal_${gfgConn.username.toLowerCase()}`,
+          () => fetchGfgCalendar({ username: gfgConn.username })
+        );
+        if (gfgData?.submissionCalendar) {
+          Object.keys(gfgData.submissionCalendar).forEach((ts) => {
+            const yr = new Date(Number(ts) * 1000).getUTCFullYear();
+            if (yr > 2010) yearsSet.add(yr);
+          });
+        }
+      } catch (e) {
+        /* silently ignore */
+      }
+    }
+
     const activeYears = Array.from(yearsSet).sort((a, b) => b - a);
 
     // Define date range – always full calendar year so all past data is included
@@ -180,6 +260,12 @@ export const getUnifiedAnalytics = async (req, res) => {
       });
     }
 
+    // Per-platform raw calendars (all-time) – reused for per-platform streak
+    let lcCalendar = null;
+    let lcNativeStreak = 0;  // LeetCode returns its own streak value – trust it directly
+    let cfCalendar = null;
+    let gfgCalendar = null;
+
     // 2. Leetcode Activity
     if ((platform === "all" || platform === "leetcode") && leetcodeConn) {
       try {
@@ -187,8 +273,11 @@ export const getUnifiedAnalytics = async (req, res) => {
           `lc_cal_${leetcodeConn.username.toLowerCase()}_${yearParam ?? 'current'}`,
           () => fetchLeetCodeCalendar({ username: leetcodeConn.username, year: yearParam })
         );
-        if (lcData?.submissionCalendar) {
-          for (const [ts, count] of Object.entries(lcData.submissionCalendar)) {
+        if (lcData) {
+          // Use LeetCode's own native streak (covers cross-year streaks correctly)
+          lcNativeStreak = lcData.streak ?? 0;
+          lcCalendar = lcData.submissionCalendar ?? {};
+          for (const [ts, count] of Object.entries(lcCalendar)) {
             const tsNum = Number(ts);
             if (tsNum >= minTs && tsNum <= maxTs) {
               mergedActivity[tsNum] = (mergedActivity[tsNum] || 0) + count;
@@ -198,6 +287,18 @@ export const getUnifiedAnalytics = async (req, res) => {
       } catch (e) {
         console.error("Error fetching LeetCode calendar:", e.message || e);
       }
+    } else if (leetcodeConn) {
+      // Platform filter excludes LC for heatmap but we still need its streak
+      try {
+        const lcAllData = await getCachedOrFetch(
+          `lc_cal_${leetcodeConn.username.toLowerCase()}_all`,
+          () => fetchLeetCodeCalendar({ username: leetcodeConn.username })
+        );
+        if (lcAllData) {
+          lcNativeStreak = lcAllData.streak ?? 0;
+          lcCalendar = lcAllData.submissionCalendar ?? null;
+        }
+      } catch (e) { /* silently ignore */ }
     }
 
     // 3. Codeforces Activity
@@ -208,6 +309,7 @@ export const getUnifiedAnalytics = async (req, res) => {
           () => fetchCodeforcesCalendar({ username: codeforcesConn.username })
         );
         if (cfData?.submissionCalendar) {
+          cfCalendar = cfData.submissionCalendar;
           for (const [ts, count] of Object.entries(cfData.submissionCalendar)) {
             const tsNum = Number(ts);
             if (tsNum >= minTs && tsNum <= maxTs) {
@@ -218,6 +320,43 @@ export const getUnifiedAnalytics = async (req, res) => {
       } catch (e) {
         console.error("Error fetching Codeforces calendar:", e.message || e);
       }
+    } else if (codeforcesConn) {
+      try {
+        const cfData = await getCachedOrFetch(
+          `cf_cal_${codeforcesConn.username.toLowerCase()}`,
+          () => fetchCodeforcesCalendar({ username: codeforcesConn.username })
+        );
+        cfCalendar = cfData?.submissionCalendar ?? null;
+      } catch (e) { /* silently ignore */ }
+    }
+
+    // 4. GFG Activity
+    if ((platform === "all" || platform === "gfg") && gfgConn) {
+      try {
+        const gfgData = await getCachedOrFetch(
+          `gfg_cal_${gfgConn.username.toLowerCase()}`,
+          () => fetchGfgCalendar({ username: gfgConn.username })
+        );
+        if (gfgData?.submissionCalendar) {
+          gfgCalendar = gfgData.submissionCalendar;
+          for (const [ts, count] of Object.entries(gfgData.submissionCalendar)) {
+            const tsNum = Number(ts);
+            if (tsNum >= minTs && tsNum <= maxTs) {
+              mergedActivity[tsNum] = (mergedActivity[tsNum] || 0) + count;
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Error fetching GFG calendar:", e.message || e);
+      }
+    } else if (gfgConn) {
+      try {
+        const gfgData = await getCachedOrFetch(
+          `gfg_cal_${gfgConn.username.toLowerCase()}`,
+          () => fetchGfgCalendar({ username: gfgConn.username })
+        );
+        gfgCalendar = gfgData?.submissionCalendar ?? null;
+      } catch (e) { /* silently ignore */ }
     }
 
     // Convert to heatmap array and calculate streak
@@ -263,6 +402,7 @@ export const getUnifiedAnalytics = async (req, res) => {
         rankLabel: true,
         stars: true,
         lastSyncedAt: true,
+        topicBreakdown: true,
       },
     });
 
@@ -276,6 +416,15 @@ export const getUnifiedAnalytics = async (req, res) => {
       if (platform === "all" || platform === pKey) {
         totalSolved += solved;
       }
+
+      // Per-platform current streak:
+      // LeetCode → use native streak from their API (handles cross-year, timezone-aware)
+      // CF/GFG  → compute from calendar data (no native streak field in their APIs)
+      let platformStreak = 0;
+      if (pKey === "leetcode") platformStreak = lcNativeStreak;
+      else if (pKey === "codeforces") platformStreak = computeCurrentStreak(cfCalendar);
+      else if (pKey === "gfg") platformStreak = computeCurrentStreak(gfgCalendar);
+
       platformBreakdown.push({
         platform: conn.platform,
         username: conn.username,
@@ -284,6 +433,8 @@ export const getUnifiedAnalytics = async (req, res) => {
         stars: conn.stars,
         solved,
         lastSyncedAt: conn.lastSyncedAt,
+        topicBreakdown: conn.topicBreakdown ?? {},
+        currentStreak: platformStreak,
       });
     }
 

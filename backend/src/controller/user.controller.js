@@ -144,6 +144,9 @@ export const getLeaderboard = async (req, res) => {
 export const getUserByUserName = async (req, res) => {
   const { userName } = req.params;
 
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
   const user = await prisma.user.findUnique({
     where: { userName },
     select: {
@@ -170,6 +173,16 @@ export const getUserByUserName = async (req, res) => {
           lastSyncedAt: true,
         },
         orderBy: { platform: "asc" },
+      },
+      dailyActivity: {
+        where: {
+          date: { gte: oneYearAgo },
+        },
+        select: {
+          date: true,
+          count: true,
+        },
+        orderBy: { date: "asc" },
       },
     },
   });

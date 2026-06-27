@@ -22,6 +22,7 @@ export const listMyPlatformConnections = async (req, res) => {
       rankLabel: true,
       synced: true,
       lastSyncedAt: true,
+      topicBreakdown: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -52,6 +53,7 @@ export const upsertMyPlatformConnection = async (req, res) => {
       rankLabel: true,
       synced: true,
       lastSyncedAt: true,
+      topicBreakdown: true,
       updatedAt: true,
     },
   });
@@ -124,6 +126,7 @@ export const syncMyPlatformStats = async (req, res) => {
         stars: stats.starRating ?? stats.stars ?? null,
         synced: true,
         lastSyncedAt: new Date(),
+        topicBreakdown: stats.topicBreakdown ?? {},
       },
       select: {
         id: true,
@@ -135,6 +138,7 @@ export const syncMyPlatformStats = async (req, res) => {
         rankLabel: true,
         synced: true,
         lastSyncedAt: true,
+        topicBreakdown: true,
         updatedAt: true,
       },
     });

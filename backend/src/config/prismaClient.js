@@ -41,4 +41,4 @@ export const prisma =
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.__prismaClient = prisma;
 }
-
+// Trigger reload after prisma generate
