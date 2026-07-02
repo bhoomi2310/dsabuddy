@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { Sidebar, DashboardSkeleton } from "./components";
 import { Dashboard } from "./Dashboard";
-import { Analytics } from "./Analytics";
 import { PYQs } from "./PYQs";
 import { Sheets } from "./Sheets";
 import { Revision } from "./Revision";
@@ -23,7 +22,7 @@ export function DashboardPage() {
   const [activeSection, setActiveSection] = useState(() => {
     const path = location.pathname;
     if (path.startsWith("/dashboard/forum")) return "forum";
-    if (path.startsWith("/dashboard/analytics")) return "analytics";
+    if (path.startsWith("/dashboard/analytics")) return "profile";
     if (path.startsWith("/dashboard/pyqs")) return "pyqs";
     if (path.startsWith("/dashboard/sheets")) return "sheets";
     if (path.startsWith("/dashboard/revision")) return "revision";
@@ -58,7 +57,7 @@ export function DashboardPage() {
     if (path.startsWith("/dashboard/forum")) {
       setActiveSection("forum");
     } else if (path.startsWith("/dashboard/analytics")) {
-      setActiveSection("analytics");
+      setActiveSection("profile");
     } else if (path.startsWith("/dashboard/pyqs")) {
       setActiveSection("pyqs");
     } else if (path.startsWith("/dashboard/sheets")) {
@@ -169,8 +168,6 @@ export function DashboardPage() {
         );
       case "problems":
         return <QuestionView titleSlug={selectedQuestionSlug} />;
-      case "analytics":
-        return <Analytics analytics={analytics} />;
       case "pyqs":
         return (
           <PYQs companies={companies} onSelectQuestion={handleSelectQuestion} />

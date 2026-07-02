@@ -50,7 +50,7 @@ export const getLeaderboard = async (req, res) => {
   const requestingUserId = req.user?.userId;
 
   // Build where clause based on filter + requesting user's profile
-  let whereClause = {};
+  let whereClause = { points: { gt: 0 } };
   let requestingUser = null;
   if (requestingUserId) {
     requestingUser = await prisma.user.findUnique({
@@ -191,6 +191,7 @@ export const getUserByUserName = async (req, res) => {
           rankLabel: true,
           synced: true,
           lastSyncedAt: true,
+          topicBreakdown: true,
         },
         orderBy: { platform: "asc" },
       },
@@ -210,7 +211,7 @@ export const getUserByUserName = async (req, res) => {
   if (!user) return res.status(404).json({ error: "User not found" });
 
   // Dynamically compute ranks via efficient COUNT queries
-  const [overallRank, branchRank, yearRank] = await Promise.all([
+  const [overallRank, branchRank, yearRank, solvedQuestionsCount, solvedSheetProblemsCount] = await Promise.all([
     prisma.user.count({ where: { points: { gt: user.points } } }).then(n => n + 1),
     user.branch
       ? prisma.user.count({ where: { branch: user.branch, points: { gt: user.points } } }).then(n => n + 1)
@@ -218,10 +219,19 @@ export const getUserByUserName = async (req, res) => {
     user.year
       ? prisma.user.count({ where: { year: user.year, points: { gt: user.points } } }).then(n => n + 1)
       : Promise.resolve(null),
+    prisma.userQuestion.count({ where: { userId: user.id, status: "SOLVED" } }),
+    prisma.userSheetProblem.count({ where: { userId: user.id, status: "SOLVED" } }),
   ]);
 
   return res.status(200).json({
-    user: { ...user, overallRank, branchRank, yearRank },
+    user: { 
+      ...user, 
+      overallRank, 
+      branchRank, 
+      yearRank,
+      solvedQuestionsCount: solvedQuestionsCount ?? 0, // wait, let's use the actual counts
+      solvedSheetProblemsCount: solvedSheetProblemsCount ?? 0
+    },
   });
 };
 

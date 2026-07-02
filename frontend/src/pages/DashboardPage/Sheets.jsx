@@ -6,9 +6,7 @@ import {
   ChevronRight,
   ChevronDown,
   FileText,
-  Youtube,
   Star,
-  StickyNote,
   ExternalLink,
   ArrowLeft,
   Check,
@@ -80,7 +78,6 @@ function SheetList() {
     <div>
       <div className="mb-8">
         <h1 className="text-white text-4xl font-normal italic mb-2 font-serif flex items-center gap-3">
-          <BookOpen className="w-8 h-8 text-[#35b9f1]" />
           Practice Sheets
         </h1>
         <p className="text-neutral-500 font-mono text-sm">
@@ -107,15 +104,12 @@ function SheetList() {
               onClick={() => navigate(`/dashboard/sheets/${s.slug}`)}
               className="text-left bg-[#0D1117] border border-neutral-900 rounded-2xl p-5 hover:border-[#35b9f1]/40 transition-colors cursor-pointer group"
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-11 h-11 rounded-xl bg-[#35b9f1]/10 flex items-center justify-center">
-                  <BookOpen className="w-5 h-5 text-[#35b9f1]" />
-                </div>
-                <ChevronRight className="w-5 h-5 text-neutral-700 group-hover:text-[#35b9f1] transition-colors" />
+              <div className="flex items-start justify-between mb-3 gap-2">
+                <h3 className="text-white font-semibold text-lg leading-snug">
+                  {s.name}
+                </h3>
+                <ChevronRight className="w-5 h-5 text-neutral-700 group-hover:text-[#35b9f1] transition-colors shrink-0" />
               </div>
-              <h3 className="text-white font-semibold text-lg leading-snug mb-1">
-                {s.name}
-              </h3>
               {s.author && (
                 <p className="text-neutral-500 text-xs font-mono mb-4">
                   by {s.author}
@@ -135,7 +129,6 @@ function SheetList() {
 function ResourceIcons({ problem }) {
   const items = [
     problem.articleUrl && { url: problem.articleUrl, icon: FileText, title: "Article", cls: "text-neutral-400 hover:text-white" },
-    problem.youtubeUrl && { url: problem.youtubeUrl, icon: Youtube, title: "Video", cls: "text-[#F26D6D] hover:text-red-400" },
   ].filter(Boolean);
 
   if (items.length === 0) return <span className="text-neutral-700">—</span>;
@@ -160,8 +153,6 @@ function ResourceIcons({ problem }) {
 }
 
 function ProblemRow({ problem, onUpdate }) {
-  const [noteOpen, setNoteOpen] = useState(false);
-  const [note, setNote] = useState(problem.note || "");
   const solved = problem.status === "SOLVED";
 
   const toggleSolved = () =>
@@ -169,14 +160,9 @@ function ProblemRow({ problem, onUpdate }) {
 
   const toggleStar = () => onUpdate(problem.id, { starred: !problem.starred });
 
-  const saveNote = () => {
-    setNoteOpen(false);
-    if (note !== (problem.note || "")) onUpdate(problem.id, { note });
-  };
-
   return (
     <>
-      <div className="grid grid-cols-[40px_1fr_auto_auto_auto_auto] items-center gap-3 px-4 py-3 border-b border-neutral-900/70 hover:bg-neutral-900/30 transition-colors">
+      <div className="grid grid-cols-[40px_1fr_auto_auto_auto] items-center gap-3 px-4 py-3 border-b border-neutral-900/70 hover:bg-neutral-900/30 transition-colors">
         {/* Status */}
         <button
           onClick={toggleSolved}
@@ -216,17 +202,6 @@ function ProblemRow({ problem, onUpdate }) {
           <ResourceIcons problem={problem} />
         </div>
 
-        {/* Note */}
-        <button
-          onClick={() => setNoteOpen((v) => !v)}
-          title="Note"
-          className={`w-8 flex justify-center transition-colors cursor-pointer ${
-            problem.note ? "text-[#35b9f1]" : "text-neutral-600 hover:text-neutral-300"
-          }`}
-        >
-          <StickyNote className="w-4 h-4" />
-        </button>
-
         {/* Revision (star) */}
         <button
           onClick={toggleStar}
@@ -247,28 +222,6 @@ function ProblemRow({ problem, onUpdate }) {
           {diffLabel(problem.difficulty)}
         </span>
       </div>
-
-      <AnimatePresence>
-        {noteOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden bg-neutral-950/60 border-b border-neutral-900/70"
-          >
-            <div className="px-4 py-3">
-              <textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                onBlur={saveNote}
-                placeholder="Add a note for this problem..."
-                rows={2}
-                className="w-full bg-black border border-neutral-800 rounded-lg px-3 py-2 text-sm text-neutral-200 font-mono focus:outline-none focus:border-[#35b9f1] resize-y"
-              />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </>
   );
 }

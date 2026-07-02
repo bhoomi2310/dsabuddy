@@ -25,7 +25,7 @@ export function Revision() {
     try {
       setLoading(true);
       setError(null);
-      const res = await questionService.getRevision(100);
+      const res = await questionService.getRevision(5);
       const list = (res.questions || []).map((q) => ({
         ...q,
         status: q.userStatuses?.[0]?.status || "UNSOLVED",
@@ -61,9 +61,7 @@ export function Revision() {
     <div>
       <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-white text-4xl font-normal italic mb-2 font-serif flex items-center gap-3">
-            <Repeat className="w-8 h-8 text-[#35b9f1]" />
-            Last Minute Revision
+          <h1 className="text-white text-4xl font-normal italic mb-2 font-serif flex items-center gap-3">            Last Minute Revision
           </h1>
           <p className="text-neutral-500 font-mono text-sm">
             A quick random set to blitz before your interview.{" "}

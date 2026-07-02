@@ -27,7 +27,6 @@ export function Sidebar({ activeSection, onSectionChange, onLogout, user }) {
     { id: 'sheets', icon: BookOpen, label: 'Sheets' },
     { id: 'revision', icon: Repeat, label: 'Revision' },
     { id: 'forum', icon: MessageSquare, label: 'Interview Forum' },
-    { id: 'analytics', icon: BarChart3, label: 'Analytics' },
     { id: 'leaderboard', icon: Trophy, label: 'Leaderboard' },
   ];
 

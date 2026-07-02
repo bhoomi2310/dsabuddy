@@ -9,7 +9,7 @@ import { Button, StatCard, Seo } from '@/components/common';
 import { PLATFORMS } from '@/config/constants';
 import { SITE, absoluteUrl } from '@/config/seo';
 
-// Dynamic rating history generator (adapted from Analytics.jsx)
+// Dynamic rating history generator
 const getHistoryForFilter = (conn, filter) => {
   if (!conn || !conn.rating) return [];
   const rating = conn.rating;
@@ -63,6 +63,32 @@ function getInitials(name) {
   if (parts.length === 1) return parts[0][0].toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
+
+const TAG_MAPPING = {
+  "array": "Arrays",
+  "string": "Strings",
+  "dynamic programming": "DP",
+  "greedy": "Greedy",
+  "tree": "Trees",
+  "binary tree": "Trees",
+  "binary search tree": "Trees",
+  "graph": "Graphs",
+  "breadth-first search": "Graphs",
+  "depth-first search": "Graphs",
+  "shortest path": "Graphs",
+  "math": "Math",
+  "geometry": "Math",
+  "number theory": "Math",
+  "backtracking": "Backtracking",
+  "arrays": "Arrays",
+  "data structures": "Arrays",
+  "strings": "Strings",
+  "dp": "DP",
+  "trees": "Trees",
+  "graphs": "Graphs",
+  "dfs and similar": "Graphs",
+  "shortest paths": "Graphs",
+};
 
 export default function ProfilePage({ embedded = false, username: usernameProp }) {
   const params = useParams();
@@ -196,6 +222,7 @@ export default function ProfilePage({ embedded = false, username: usernameProp }
           problemsSolved: conn.problemsSolved,
           rankLabel: conn.rankLabel,
           synced: conn.synced,
+          topicBreakdown: conn.topicBreakdown,
           connected: true
         };
       }
@@ -216,6 +243,22 @@ export default function ProfilePage({ embedded = false, username: usernameProp }
     return displayConnections.find(c => c.id === activePlatformTab);
   }, [displayConnections, activePlatformTab]);
 
+  const totalPlatformSolved = useMemo(() => {
+    if (!profile) return 0;
+    return (profile.platformConnections || []).reduce((acc, conn) => {
+      return acc + (conn.problemsSolved || 0);
+    }, 0);
+  }, [profile]);
+
+  const maxPlatformRating = useMemo(() => {
+    if (!profile) return null;
+    const ratings = (profile.platformConnections || [])
+      .map(c => c.rating)
+      .filter(r => typeof r === 'number' && r > 0);
+    if (ratings.length === 0) return null;
+    return Math.max(...ratings);
+  }, [profile]);
+
   // Map backend dailyActivity to heatmap structure
   const displayHeatmap = useMemo(() => {
     if (heatmapData && heatmapData.length > 0) return heatmapData;
@@ -231,6 +274,114 @@ export default function ProfilePage({ embedded = false, username: usernameProp }
       };
     });
   }, [profile, heatmapData]);
+
+  // Topic Distribution
+  const topics = useMemo(() => {
+    if (!activeConnection) return [];
+    
+    // Initialize standard topics with 0
+    const counts = {
+      Arrays: 0,
+      DP: 0,
+      Strings: 0,
+      Greedy: 0,
+      Trees: 0,
+      Graphs: 0,
+      Math: 0,
+      Backtracking: 0
+    };
+    
+    const breakdown = activeConnection.topicBreakdown || {};
+    
+    // Accumulate actual values
+    Object.entries(breakdown).forEach(([rawTag, count]) => {
+      const tagLower = rawTag.toLowerCase();
+      const mapped = TAG_MAPPING[tagLower];
+      if (mapped) {
+        counts[mapped] += count;
+      } else {
+        if (tagLower.includes("array")) counts.Arrays += count;
+        else if (tagLower.includes("string")) counts.Strings += count;
+        else if (tagLower.includes("tree")) counts.Trees += count;
+        else if (tagLower.includes("graph") || tagLower.includes("dfs") || tagLower.includes("bfs") || tagLower.includes("shortest")) counts.Graphs += count;
+        else if (tagLower.includes("greedy")) counts.Greedy += count;
+        else if (tagLower.includes("math") || tagLower.includes("geometry") || tagLower.includes("number theory")) counts.Math += count;
+        else if (tagLower.includes("backtracking")) counts.Backtracking += count;
+        else if (tagLower.includes("dynamic programming") || tagLower === "dp") counts.DP += count;
+      }
+    });
+
+    return Object.entries(counts).map(([name, count]) => ({
+      name,
+      count
+    })).sort((a, b) => b.count - a.count);
+  }, [activeConnection]);
+
+  const hasTopics = useMemo(() => topics.some((t) => t.count > 0), [topics]);
+
+  // Skill Radar calculations
+  const radarPoints = useMemo(() => {
+    if (!activeConnection || !hasTopics) return [];
+    const center = 110;
+    const rBase = 72;
+    
+    const topicMap = {};
+    topics.forEach((t) => {
+      topicMap[t.name] = t.count;
+    });
+
+    const maxCount = Math.max(...topics.map((t) => t.count), 1);
+    const keys = ["Arrays", "DP", "Graphs", "Trees", "Strings", "Math", "Greedy"];
+
+    return keys.map((key, i) => {
+      const angle = (2 * Math.PI * i) / 7 - Math.PI / 2;
+      const count = topicMap[key] || 0;
+      const val = count === 0 ? 15 : Math.round(15 + (count / maxCount) * 80);
+      const r = rBase * (val / 100);
+      return {
+        x: center + r * Math.cos(angle),
+        y: center + r * Math.sin(angle),
+        label: key
+      };
+    });
+  }, [activeConnection, topics, hasTopics]);
+
+  // Concentric heptagon grid rings
+  const radarGridRings = useMemo(() => {
+    const center = 110;
+    const rBase = 72;
+    const ringPercentages = [0.25, 0.5, 0.75, 1.0];
+
+    return ringPercentages.map((pct) => {
+      const r = rBase * pct;
+      return Array.from({ length: 7 }).map((_, i) => {
+        const angle = (2 * Math.PI * i) / 7 - Math.PI / 2;
+        return {
+          x: center + r * Math.cos(angle),
+          y: center + r * Math.sin(angle)
+        };
+      });
+    });
+  }, []);
+
+  // Skill Radar Labels Position Helper
+  const radarLabels = useMemo(() => {
+    const center = 110;
+    const rBase = 72;
+    const keys = ["Arrays", "DP", "Graphs", "Trees", "Strings", "Math", "Greedy"];
+
+    return keys.map((key, i) => {
+      const angle = (2 * Math.PI * i) / 7 - Math.PI / 2;
+      const rx = rBase + 22;
+      const ry = rBase + 12;
+      return {
+        x: center + rx * Math.cos(angle),
+        y: center + ry * Math.sin(angle),
+        label: key,
+        anchor: Math.abs(Math.cos(angle)) < 0.1 ? "middle" : Math.cos(angle) > 0 ? "start" : "end"
+      };
+    });
+  }, []);
 
   // Reset hover state when active platform, compare state, or time filter changes
   useEffect(() => {
@@ -522,6 +673,12 @@ export default function ProfilePage({ embedded = false, username: usernameProp }
                           Class of {profile.year}
                         </span>
                       )}
+                      {profile.createdAt && (
+                        <span className="flex items-center gap-1.5">
+                          <Calendar className="w-4 h-4 text-neutral-500" />
+                          Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -554,6 +711,37 @@ export default function ProfilePage({ embedded = false, username: usernameProp }
                     label="Year Rank"
                     value={profile.yearRank ? `#${profile.yearRank}` : '-'}
                     color="#C084FC"
+                  />
+                </div>
+
+                {/* Practice Stats Summary Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <StatCard
+                    icon={CheckCircle2}
+                    label="Questions Solved"
+                    value={profile.solvedQuestionsCount ?? 0}
+                    color="#10B981"
+                  />
+                  
+                  <StatCard
+                    icon={BookOpen}
+                    label="Sheet Solved"
+                    value={profile.solvedSheetProblemsCount ?? 0}
+                    color="#35b9f1"
+                  />
+
+                  <StatCard
+                    icon={Trophy}
+                    label="Max Platform Rating"
+                    value={maxPlatformRating ? maxPlatformRating : "—"}
+                    color="#F5B14C"
+                  />
+
+                  <StatCard
+                    icon={Activity}
+                    label="Total Platform Solved"
+                    value={totalPlatformSolved > 0 ? totalPlatformSolved : "—"}
+                    color="#EF4444"
                   />
                 </div>
 
@@ -896,6 +1084,98 @@ export default function ProfilePage({ embedded = false, username: usernameProp }
                     />
                   </div>
                 </div>
+
+                {/* Topic Distribution & Skill Profile */}
+                {hasTopics && (
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                    {/* Topic Distribution */}
+                    <div className="md:col-span-2 space-y-4">
+                      <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                        Topic Distribution
+                      </h3>
+                      <div className="border border-neutral-900 bg-neutral-950/40 p-5 rounded-2xl h-[320px] overflow-y-auto space-y-3.5 custom-scrollbar">
+                        {topics.filter((t) => t.count > 0).map((topic) => {
+                          const maxVal = Math.max(...topics.map((t) => t.count), 1);
+                          const pct = (topic.count / maxVal) * 100;
+                          return (
+                            <div key={topic.name} className="space-y-1">
+                              <div className="flex justify-between items-baseline text-[10px] font-mono font-bold leading-none">
+                                <span className="text-[#E5E7EB]">{topic.name}</span>
+                                <span className="text-[#35b9f1]">{topic.count}</span>
+                              </div>
+                              <div className="h-2 w-full bg-neutral-900 rounded-[2px] relative overflow-hidden">
+                                <div className="absolute top-0 left-0 h-full bg-[#35b9f1]/10 w-full" />
+                                <div
+                                  style={{ width: `${pct}%` }}
+                                  className="absolute top-0 left-0 h-full bg-[#35b9f1] transition-all duration-500"
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Skill Profile */}
+                    <div className="md:col-span-3 space-y-4">
+                      <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                        Skill Profile
+                      </h3>
+                      <div className="border border-neutral-900 bg-neutral-950/40 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-6 h-[320px]">
+                        <div className="flex-1 space-y-2 text-center sm:text-left max-w-sm">
+                          <h4 className="text-lg font-bold text-white">DSA Mastery Index</h4>
+                          <p className="text-xs text-[#9CA3AF] leading-relaxed font-mono">
+                            Heptagonal representation of topic competence based on solve counts.
+                          </p>
+                          <div className="pt-2 text-left space-y-1 text-xs font-mono">
+                            <div className="flex justify-between border-b border-neutral-800 pb-1">
+                              <span className="text-[#9CA3AF]">Primary Strength</span>
+                              <span className="text-[#35b9f1] font-bold">{topics.filter((t) => t.count > 0)[0]?.name || "N/A"}</span>
+                            </div>
+                            <div className="flex justify-between border-b border-neutral-800 pb-1">
+                              <span className="text-[#9CA3AF]">Growth Area</span>
+                              <span className="text-[#E5E7EB] font-bold">{topics.filter((t) => t.count > 0)[topics.filter((t) => t.count > 0).length - 1]?.name || "N/A"}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="w-[200px] h-[200px] shrink-0">
+                          <svg viewBox="0 0 220 220" className="w-full h-full font-mono overflow-visible">
+                            {radarGridRings.map((ring, rIdx) => (
+                              <polygon
+                                key={rIdx}
+                                points={ring.map((v) => `${v.x},${v.y}`).join(" ")}
+                                stroke="#1F2937"
+                                strokeWidth="0.75"
+                                fill={rIdx === 3 ? "#0D1117" : "none"}
+                              />
+                            ))}
+                            {Array.from({ length: 7 }).map((_, i) => {
+                              const angle = (2 * Math.PI * i) / 7 - Math.PI / 2;
+                              return (
+                                <line key={i} x1="110" y1="110"
+                                  x2={110 + 72 * Math.cos(angle)}
+                                  y2={110 + 72 * Math.sin(angle)}
+                                  stroke="#1F2937" strokeWidth="0.75"
+                                />
+                              );
+                            })}
+                            <polygon
+                              points={radarPoints.map((v) => `${v.x},${v.y}`).join(" ")}
+                              stroke="#35b9f1" strokeWidth="1.5" fill="#35b9f1" fillOpacity="0.2"
+                            />
+                            {radarLabels.map((l, i) => (
+                              <text key={i} x={l.x} y={l.y + 3} fill="#9CA3AF" fontSize="11"
+                                textAnchor={l.anchor}
+                                className="font-mono uppercase tracking-tighter font-semibold"
+                              >{l.label}</text>
+                            ))}
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
               </div>
             ) : null}

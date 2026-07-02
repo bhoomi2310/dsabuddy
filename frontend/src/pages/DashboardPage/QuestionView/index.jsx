@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Badge, Spinner } from '../../../components/common';
-import { mockQuestion } from './mockData';
 import { leetcodeService } from '@/api/services';
 import DOMPurify from 'dompurify';
 
