@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageSquare, Search, Plus, ArrowLeft, Calendar, Send, X, ShieldAlert, ChevronUp, ChevronDown, Bold, Italic, Heading1, Heading2, List, Link, Code, Image as ImageIcon, Trash2, Pencil } from 'lucide-react';
 import { forumService } from '@/api/services/forumService';
-import { Badge, Button, Card, Input } from '@/components/common';
+import { Badge, Button, Card, Input, CreateExperienceFullPage } from '@/components/common';
 import apiClient from '@/api/client';
 import { useUserStore } from '@/store/useUserStore';
 import { getErrorMessage } from '@/utils';
@@ -309,102 +309,6 @@ export function InterviewForum() {
   const [postContent, setPostContent] = useState('');
   const [postTags, setPostTags] = useState('');
   const [postError, setPostError] = useState('');
-  const [uploadingImage, setUploadingImage] = useState(false);
-
-  const [activeTab, setActiveTab] = useState('write');
-  const [isDragging, setIsDragging] = useState(false);
-
-  const insertMarkdown = (prefix, suffix = '') => {
-    const textarea = document.getElementById('post-content-textarea');
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
-    const selectedText = text.substring(start, end);
-    const replacement = prefix + selectedText + suffix;
-
-    setPostContent(
-      text.substring(0, start) +
-      replacement +
-      text.substring(end)
-    );
-
-    // Reset selection/focus
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + prefix.length, start + prefix.length + selectedText.length);
-    }, 0);
-  };
-
-  const uploadFile = async (file) => {
-    if (!file) return;
-    const uploadData = new FormData();
-    uploadData.append('file', file);
-
-    try {
-      setUploadingImage(true);
-      setPostError('');
-      const res = await apiClient.post('/upload/upload', uploadData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      const url = res?.url || res?.data?.url;
-      if (url) {
-        insertMarkdown(`![${file.name}](${url})`);
-      } else {
-        setPostError("Failed to upload image. No URL was returned from the server.");
-      }
-    } catch (err) {
-      console.error("Image upload failed:", err);
-      setPostError("Failed to upload image. Please try again.");
-    } finally {
-      setUploadingImage(false);
-    }
-  };
-
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) uploadFile(file);
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-      uploadFile(file);
-    }
-  };
-
-  const handleKeyDown = (e) => {
-    // Bold: Cmd/Ctrl + B
-    if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
-      e.preventDefault();
-      insertMarkdown('**', '**');
-    }
-    // Italic: Cmd/Ctrl + I
-    if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
-      e.preventDefault();
-      insertMarkdown('*', '*');
-    }
-    // Inline code: Cmd/Ctrl + E
-    if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
-      e.preventDefault();
-      insertMarkdown('`', '`');
-    }
-  };
-
   // Comment state
   const [commentContent, setCommentContent] = useState('');
 
@@ -557,7 +461,6 @@ export function InterviewForum() {
     setPostContent(post.content || '');
     setPostTags(Array.isArray(post.tags) ? post.tags.join(', ') : (post.tags || ''));
     setPostError('');
-    setActiveTab('write');
     setShowCreateModal(true);
   };
 
@@ -576,7 +479,6 @@ export function InterviewForum() {
     setPostContent('');
     setPostTags('');
     setPostError('');
-    setActiveTab('write');
     setShowCreateModal(true);
   };
 
@@ -713,8 +615,51 @@ export function InterviewForum() {
   return (
     <div className="space-y-8 pb-16">
       
-      {/* Detail Post View */}
-      {selectedPost ? (
+      {showCreateModal ? (
+        <CreateExperienceFullPage
+          initialTitle={postTitle}
+          initialContent={postContent}
+          initialTags={postTags ? (typeof postTags === 'string' ? postTags.split(',').map(t => t.trim()).filter(Boolean) : postTags) : []}
+          onPublish={async ({ title, content, tags }) => {
+            try {
+              setSubmittingPost(true);
+              if (editingPostId) {
+                const data = await forumService.updatePost(editingPostId, {
+                  title,
+                  content,
+                  tags
+                });
+                setPosts(prev => prev.map(p => (p.id === editingPostId ? data.post : p)));
+                setSelectedPost(data.post);
+              } else {
+                const data = await forumService.createPost({
+                  title,
+                  content,
+                  tags
+                });
+                setPosts(prev => [data.post, ...prev]);
+              }
+              setShowCreateModal(false);
+              setEditingPostId(null);
+              setPostTitle('');
+              setPostContent('');
+              setPostTags('');
+            } catch (err) {
+              console.error(err);
+              throw err;
+            } finally {
+              setSubmittingPost(false);
+            }
+          }}
+          onCancel={() => {
+            setShowCreateModal(false);
+            setEditingPostId(null);
+            setPostTitle('');
+            setPostContent('');
+            setPostTags('');
+          }}
+        />
+      ) : selectedPost ? (
         <div className="space-y-6">
           <Button
             onClick={() => { setSelectedPost(null); fetchPosts(); }}
@@ -802,26 +747,25 @@ export function InterviewForum() {
 
             {/* Post Content */}
             <div 
-              className="text-[#E5E7EB] text-base leading-relaxed space-y-4 font-medium"
+              className="text-[#E5E7EB] text-sm leading-relaxed space-y-4 font-medium"
               dangerouslySetInnerHTML={{ __html: renderPostContent(selectedPost.content) }}
             />
 
-            {/* Voting and Comments Footer */}
-            <div className="flex items-center gap-4 border-t border-b border-[#1F2937] py-4">
+            {/* Footer / Actions */}
+            <div className="flex items-center gap-4 border-t border-[#1F2937] pt-6 select-none">
               <div className="flex items-center bg-[#0D1117] border border-[#1F2937] rounded-xl p-1 gap-1">
                 <button
                   onClick={(e) => handleVote(e, selectedPost.id, 1)}
-                  className={`p-2 rounded-lg transition-all duration-200 cursor-pointer ${
+                  className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer ${
                     selectedPost.userVote === 1
                       ? 'text-[#35b9f1] bg-[#35b9f1]/10'
                       : 'text-[#9CA3AF] hover:text-white hover:bg-[#161B22]'
                   }`}
-                  title="Upvote"
                 >
                   <ChevronUp className="w-5 h-5" />
                 </button>
                 
-                <span className={`px-2 font-mono font-bold text-sm min-w-[20px] text-center ${
+                <span className={`px-2 font-mono font-bold text-xs min-w-[20px] text-center ${
                   selectedPost.userVote === 1
                     ? 'text-[#35b9f1]'
                     : selectedPost.userVote === -1
@@ -833,48 +777,60 @@ export function InterviewForum() {
 
                 <button
                   onClick={(e) => handleVote(e, selectedPost.id, -1)}
-                  className={`p-2 rounded-lg transition-all duration-200 cursor-pointer ${
+                  className={`p-1.5 rounded-lg transition-all duration-200 cursor-pointer ${
                     selectedPost.userVote === -1
                       ? 'text-red-500 bg-red-500/10'
                       : 'text-[#9CA3AF] hover:text-white hover:bg-[#161B22]'
                   }`}
-                  title="Downvote"
                 >
                   <ChevronDown className="w-5 h-5" />
                 </button>
               </div>
               
-              <div className="flex items-center gap-2 text-[#9CA3AF] text-sm font-semibold font-mono pl-2">
+              <div className="flex items-center gap-2 text-[#9CA3AF] text-sm font-semibold font-mono bg-[#0D1117] border border-[#1F2937] rounded-xl px-4 py-2">
                 <MessageSquare className="w-4 h-4" />
                 {selectedPost.comments?.length || 0} Comments
               </div>
             </div>
 
-            {/* Comments Area */}
-            <div className="space-y-6 pt-2">
-              <h3 className="text-lg font-extrabold text-white">Comments</h3>
-              
-              {/* Comment submission form */}
-              <form onSubmit={handleAddComment} className="flex gap-4">
-                <textarea
+          </Card>
+
+          {/* Comments Section */}
+          <Card variant="default" animated={false} className="rounded-2xl p-6 md:p-8 space-y-6">
+            <h3 className="text-white font-extrabold text-lg">Discussion</h3>
+            
+            {/* New Comment Input */}
+            <form onSubmit={handleAddComment} className="flex gap-4">
+              <img
+                src={loggedInUser?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${loggedInUser?.name || 'User'}`}
+                alt="my avatar"
+                className="w-9 h-9 rounded-lg bg-[#0D1117] border border-[#1F2937] p-0.5 shrink-0"
+              />
+              <div className="flex-1 flex gap-3">
+                <Input
+                  type="text"
                   placeholder="Share your thoughts or ask a question..."
                   value={commentContent}
                   onChange={(e) => setCommentContent(e.target.value)}
-                  className="flex-1 min-h-[48px] max-h-[160px] bg-[#0D1117] border border-[#1F2937] rounded-xl px-4 py-3 text-sm text-[#E5E7EB] placeholder-[#6B7280] focus:outline-none focus:border-[#35b9f1]/30 transition-all"
-                  rows={2}
+                  className="flex-1"
+                  inputClassName="py-2.5 bg-[#0D1117] border-[#1F2937] rounded-xl focus:border-[#35b9f1]/30"
+                  required
                 />
                 <Button
                   type="submit"
                   disabled={submittingComment || !commentContent.trim()}
-                  className="bg-[#35b9f1] hover:bg-[#10a3e0] text-[#0D1117] font-extrabold rounded-xl px-5 flex items-center justify-center cursor-pointer transition-all self-end h-[48px]"
+                  variant="accent"
+                  className="rounded-xl px-5 h-[42px] shrink-0 font-extrabold flex items-center gap-1.5"
                 >
-                  {submittingComment ? 'Posting...' : <Send className="w-4 h-4" />}
+                  <Send className="w-4 h-4" />
+                  Comment
                 </Button>
-              </form>
+              </div>
+            </form>
 
-              {/* Threaded Comments list */}
-              <div className="space-y-6 pt-2">
-                {commentTree && commentTree.length > 0 ? (
+            <div className="border-t border-[#1F2937] pt-6">
+              <div className="space-y-6">
+                {commentTree.length > 0 ? (
                   commentTree.map((comment) => (
                     <CommentNode 
                       key={comment.id} 
@@ -891,7 +847,6 @@ export function InterviewForum() {
                 )}
               </div>
             </div>
-
           </Card>
         </div>
       ) : (
@@ -1115,267 +1070,6 @@ export function InterviewForum() {
           </div>
         </div>
       )}
-
-      {/* Floating Create Post Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
-          <div className="bg-[#161B22] border border-[#1F2937] rounded-3xl w-full max-w-5xl overflow-hidden shadow-2xl flex flex-col h-[85vh] max-h-[800px]">
-            
-            <div className="flex items-center justify-between border-b border-[#1F2937] px-6 py-4">
-              <div className="flex items-center gap-4">
-                <h3 className="text-white font-extrabold text-lg">{editingPostId ? 'Edit Interview Experience' : 'Share Interview Experience'}</h3>
-                
-                {/* Write vs Preview Tabs */}
-                <div className="flex bg-[#0D1117] border border-[#1F2937] rounded-lg p-0.5 ml-2">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('write')}
-                    className={`px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
-                      activeTab === 'write'
-                        ? 'bg-[#35b9f1] text-[#0D1117]'
-                        : 'text-[#9CA3AF] hover:text-white'
-                    }`}
-                  >
-                    Write
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('preview')}
-                    className={`px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
-                      activeTab === 'preview'
-                        ? 'bg-[#35b9f1] text-[#0D1117]'
-                        : 'text-[#9CA3AF] hover:text-white'
-                    }`}
-                  >
-                    Preview
-                  </button>
-                </div>
-              </div>
-              <button
-                onClick={closePostModal}
-                className="text-[#6B7280] hover:text-white transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitPost} className="flex-1 flex flex-col overflow-hidden">
-              
-              <div className="p-6 space-y-5 flex-1 overflow-y-auto flex flex-col min-h-0">
-                {postError && (
-                  <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-3.5 rounded-xl text-xs flex items-center gap-2">
-                    <ShieldAlert className="w-4 h-4 shrink-0" />
-                    <span>{postError}</span>
-                  </div>
-                )}
-
-                <Input
-                  label="Experience Title"
-                  type="text"
-                  placeholder="e.g. Google SWE FTE Interview Experience (On-Campus)"
-                  value={postTitle}
-                  onChange={(e) => setPostTitle(e.target.value)}
-                  labelClassName="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider mb-1.5 block normal-case"
-                  inputClassName="py-3 bg-[#0D1117] border-[#1F2937] rounded-xl focus:border-[#35b9f1]/30"
-                  required
-                  className="shrink-0"
-                />
-
-                {activeTab === 'write' ? (
-                  <div className="space-y-4 flex-1 flex flex-col min-h-0">
-                    <div className="space-y-1.5 flex-1 flex flex-col min-h-0">
-                      <label className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Describe Your Journey</label>
-                      
-                      {/* Formatting Toolbar */}
-                      <div className="flex flex-wrap items-center justify-between bg-[#0D1117] border border-[#1F2937] border-b-0 rounded-t-xl px-3 py-2 animate-fadeIn select-none shrink-0">
-                        <div className="flex flex-wrap items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => insertMarkdown('**', '**')}
-                            className="p-1.5 text-[#9CA3AF] hover:text-white hover:bg-[#161B22] rounded transition-all cursor-pointer"
-                            title="Bold (Cmd+B / Ctrl+B)"
-                          >
-                            <Bold className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => insertMarkdown('*', '*')}
-                            className="p-1.5 text-[#9CA3AF] hover:text-white hover:bg-[#161B22] rounded transition-all cursor-pointer"
-                            title="Italic (Cmd+I / Ctrl+I)"
-                          >
-                            <Italic className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => insertMarkdown('# ')}
-                            className="p-1.5 text-[#9CA3AF] hover:text-white hover:bg-[#161B22] rounded transition-all cursor-pointer"
-                            title="Heading 1"
-                          >
-                            <Heading1 className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => insertMarkdown('## ')}
-                            className="p-1.5 text-[#9CA3AF] hover:text-white hover:bg-[#161B22] rounded transition-all cursor-pointer"
-                            title="Heading 2"
-                          >
-                            <Heading2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => insertMarkdown('- ')}
-                            className="p-1.5 text-[#9CA3AF] hover:text-white hover:bg-[#161B22] rounded transition-all cursor-pointer"
-                            title="Bullet List"
-                          >
-                            <List className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => insertMarkdown('`', '`')}
-                            className="px-2 py-1 text-[#9CA3AF] hover:text-white hover:bg-[#161B22] rounded transition-all cursor-pointer text-xs font-mono font-bold"
-                            title="Inline Code (Cmd+E / Ctrl+E)"
-                          >
-                            &lt;&gt;
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => insertMarkdown('```\n', '\n```')}
-                            className="p-1.5 text-[#9CA3AF] hover:text-white hover:bg-[#161B22] rounded transition-all cursor-pointer"
-                            title="Code Block"
-                          >
-                            <Code className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const url = prompt('Enter link URL:');
-                              if (url) insertMarkdown('[', `](${url})`);
-                            }}
-                            className="p-1.5 text-[#9CA3AF] hover:text-white hover:bg-[#161B22] rounded transition-all cursor-pointer"
-                            title="Insert Link"
-                          >
-                            <Link className="w-4 h-4" />
-                          </button>
-                        </div>
-
-                        {/* Photo Upload indicator/button */}
-                        <div className="flex items-center gap-2">
-                          {uploadingImage && (
-                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#35b9f1] animate-pulse pr-1">
-                              <span className="h-1.5 w-1.5 bg-[#35b9f1] rounded-full animate-ping" />
-                              Uploading Image...
-                            </div>
-                          )}
-                          <label className="p-1.5 text-[#9CA3AF] hover:text-white hover:bg-[#161B22] rounded transition-all cursor-pointer flex items-center justify-center gap-1.5">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleImageUpload}
-                              className="hidden"
-                              disabled={uploadingImage}
-                            />
-                            <ImageIcon className="w-4 h-4" />
-                            <span className="text-[10px] font-bold uppercase tracking-wider">Add Photo</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      {/* Text editor dropzone */}
-                      <div 
-                        className={`relative flex-1 flex flex-col rounded-b-xl border transition-all duration-300 min-h-0 ${
-                          isDragging 
-                            ? 'border-[#35b9f1] bg-[#35b9f1]/5 shadow-inner' 
-                            : 'border-[#1F2937] bg-[#0D1117] hover:border-[#1F2937]/80'
-                        }`}
-                        onDragOver={handleDragOver}
-                        onDragLeave={handleDragLeave}
-                        onDrop={handleDrop}
-                      >
-                        {isDragging && (
-                          <div className="absolute inset-0 bg-[#0D1117]/85 backdrop-blur-sm z-10 flex flex-col items-center justify-center gap-2.5 border-2 border-dashed border-[#35b9f1] rounded-b-xl pointer-events-none animate-fadeIn">
-                            <ImageIcon className="w-8 h-8 text-[#35b9f1] animate-bounce" />
-                            <p className="text-xs font-bold text-[#35b9f1] uppercase tracking-wider">Drop image to upload</p>
-                          </div>
-                        )}
-                        <textarea
-                          id="post-content-textarea"
-                          placeholder="Outline the rounds, types of questions asked (e.g. graphs, DP), eligibility criteria, behavioral questions, and preparation tips..."
-                          value={postContent}
-                          onChange={(e) => setPostContent(e.target.value)}
-                          onKeyDown={handleKeyDown}
-                          className="w-full flex-1 bg-transparent border-none outline-none focus:outline-none focus:ring-0 px-4 py-3 text-sm text-white resize-none overflow-y-auto"
-                          required
-                        />
-                      </div>
-                      <span className="text-[10px] text-[#6B7280] font-mono mt-1 shrink-0">
-                        Tip: Drag & drop images directly or use Ctrl/Cmd+B, Ctrl/Cmd+I shortcuts.
-                      </span>
-                    </div>
-
-                    <Input
-                      label="Filter Tags (Comma separated)"
-                      type="text"
-                      placeholder="e.g. Google, SWE, Internship, On-Campus"
-                      value={postTags}
-                      onChange={(e) => setPostTags(e.target.value)}
-                      labelClassName="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider mb-1.5 block normal-case"
-                      inputClassName="py-3 bg-[#0D1117] border-[#1F2937] rounded-xl focus:border-[#35b9f1]/30"
-                      className="shrink-0"
-                    />
-                    <span className="text-[10px] text-[#6B7280] block font-mono mt-1">
-                      Separate tags with commas. Popular: Google, Amazon, System Design, HR Round.
-                    </span>
-                  </div>
-                ) : (
-                  /* Live Preview Tab */
-                  <div className="flex-1 flex flex-col min-h-0 space-y-2">
-                    <label className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider shrink-0">Live Preview</label>
-                    <div className="flex-1 bg-[#0D1117] border border-[#1F2937] rounded-xl p-5 overflow-y-auto min-h-0">
-                      {postContent.trim() ? (
-                        <div 
-                          className="text-[#E5E7EB] text-sm leading-relaxed space-y-4 font-medium"
-                          dangerouslySetInnerHTML={{ __html: renderPostContent(postContent) }}
-                        />
-                      ) : (
-                        <div className="flex flex-col items-center justify-center py-16 text-center">
-                          <MessageSquare className="w-8 h-8 text-[#6B7280] mb-2 opacity-55 animate-pulse" />
-                          <p className="text-gray-500 text-xs italic font-mono">Nothing to preview yet. Start writing in the editor tab!</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-              </div>
-
-              <div className="flex gap-3 justify-end p-6 border-t border-[#1F2937] bg-[#161B22] shrink-0">
-                <Button
-                  type="button"
-                  onClick={closePostModal}
-                  variant="outline"
-                  size="sm"
-                  className="px-5 py-2.5 rounded-xl border-[#1F2937] text-sm font-extrabold text-[#9CA3AF] hover:text-white transition-all"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={submittingPost}
-                  variant="accent"
-                  size="sm"
-                  className="rounded-xl px-6 py-2.5 font-extrabold"
-                >
-                  {submittingPost
-                    ? (editingPostId ? 'Saving...' : 'Publishing...')
-                    : (editingPostId ? 'Save Changes' : 'Publish Experience')}
-                </Button>
-              </div>
-
-            </form>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }

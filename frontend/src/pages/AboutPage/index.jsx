@@ -120,7 +120,7 @@ const FullCard = ({ member, type, index = 0 }) => {
       <motion.img
         src={member.image}
         alt={member.name}
-        className="absolute inset-0 w-full h-full object-contain"
+        className="absolute inset-0 w-full h-full object-cover"
         whileHover={{ scale: 1.08 }}
         transition={{ duration: 1.2, ease: [0.25, 0.46, 0.45, 0.94] }}
       />

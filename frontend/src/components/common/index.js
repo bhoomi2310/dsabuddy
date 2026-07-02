@@ -9,3 +9,5 @@ export { Spinner } from './Spinner';
 export { StatCard } from './StatCard';
 export { Modal } from './Modal';
 export { Seo } from './Seo';
+export { CreateExperienceFullPage } from './CreateExperienceFullPage';
+
