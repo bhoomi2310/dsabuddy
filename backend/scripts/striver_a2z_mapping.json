@@ -1,6 +1,4 @@
-import { prisma } from "../src/config/prismaClient.js";
-
-const mapping = [
+[
   {
     "title": "Input Output",
     "platform": "gfg",
@@ -2833,67 +2831,4 @@ const mapping = [
     "link": "https://leetcode.com/problems/count-palindromic-subsequences/",
     "needs_review": false
   }
-];
-
-async function main() {
-  console.log("Starting Striver A2Z Sheet links update...");
-  await prisma.$connect();
-  
-  try {
-    const sheet = await prisma.sheet.findUnique({
-      where: { slug: "strivers-a2z-dsa-sheet" }
-    });
-    
-    if (!sheet) {
-      console.error("Sheet 'strivers-a2z-dsa-sheet' not found in database.");
-      return;
-    }
-    
-    console.log(`Found sheet '${sheet.name}' (ID: ${sheet.id}).`);
-    
-    // Fetch all problems for this sheet
-    const problems = await prisma.sheetProblem.findMany({
-      where: { sheetId: sheet.id }
-    });
-    console.log(`Loaded ${problems.length} problems from database.`);
-    
-    // Normalize string helper
-    const normalize = (t) => t.toLowerCase().replace(/[^a-z0-9]/g, '');
-    
-    // Build a lookup map of mapping entries
-    const mappingMap = {};
-    for (const item of mapping) {
-      const norm = normalize(item.title);
-      mappingMap[norm] = item;
-    }
-    
-    let updatedCount = 0;
-    let unmatchedCount = 0;
-    
-    for (const problem of problems) {
-      const normTitle = normalize(problem.title);
-      const match = mappingMap[normTitle];
-      
-      if (match) {
-        await prisma.sheetProblem.update({
-          where: { id: problem.id },
-          data: { practiceUrl: match.link }
-        });
-        updatedCount++;
-      } else {
-        unmatchedCount++;
-        console.warn(`Unmatched problem in database: "${problem.title}"`);
-      }
-    }
-    
-    console.log("Striver A2Z Sheet update completed successfully.");
-    console.log(`Updated problems: ${updatedCount}`);
-    console.log(`Unmatched problems: ${unmatchedCount}`);
-  } catch (error) {
-    console.error("Error updating sheet links:", error);
-  } finally {
-    await prisma.$disconnect();
-  }
-}
-
-main();
+]
